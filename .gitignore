@@ -1,0 +1,15 @@
+# Large local data and training artifacts
+*.npz
+*.keras
+outputs/
+
+# SLURM and notebook runtime artifacts
+*.out
+*_executed.ipynb
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
