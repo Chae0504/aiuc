@@ -6,6 +6,7 @@ mismatch is sufficiently small.
 | Date | Job ID | Git Commit | Description | Status Acc. | Power MAE | Mismatch MAE | Mismatch | Notes |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
 | 2026-05-31 | baseline | pre-git | Before dimensionless loss | 94.45% | 12.90 MW | 457.03 MW | 11.97% | Balance mismatch remains too large |
+| 2026-05-31 | 22210 | b4beacb | Dimensionless loss; Phase 2 balance weight=2 | 93.73% | 13.65 MW | 415.92 MW | 10.90% | Early stopped at epoch 55; restored best epoch 15. Mismatch improved 9.00%, but remains too large |
 
 ## Workflow
 
