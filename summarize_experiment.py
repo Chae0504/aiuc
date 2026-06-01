@@ -31,6 +31,7 @@ def main():
         f"{metrics['power_mae_mw']:.2f} MW | "
         f"{metrics['mismatch_mae_mw']:.2f} MW | "
         f"{metrics['mismatch_percent_of_mean_demand']:.2f}% | "
+        f"{metrics['ai_average_daily_cost']:,.2f} | "
         f"{args.notes} |"
     )
 

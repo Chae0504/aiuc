@@ -28,5 +28,5 @@ python -u AIUC/train_rnncell.py \
   --phase2-patience 40 \
   --reduce-lr-patience 8 \
   --reduce-lr-factor 0.5 \
-  --phase2-balance-loss-weight 5 \
+  --phase2-balance-loss-weight 10 \
   --verbose 2
