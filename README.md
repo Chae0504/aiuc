@@ -64,6 +64,60 @@ outputs are used as the previous-hour state for the next ramp calculation.
 Residual demand that cannot be covered by the online generators remains in the
 balance loss and can still guide the commitment decision.
 
+## Strict UC Dataset Generation
+
+The original `uc_new_data.npz` is preserved for comparison. Generate a separate
+50,000-sample dataset with hard power-balance, capacity, startup, shutdown,
+ramp, and minimum-time constraints on this server:
+
+```bash
+module load julia/1.11.3 gurobi/13.0.1
+julia --project=. -e 'using Pkg; Pkg.instantiate()'
+./run_strict_uc_generation.sh
+```
+
+The generator reads `generator_specs.csv` and writes:
+
+```text
+uc_new_data_strict.npz
+```
+
+Generation is reproducible and configurable through environment variables:
+
+```bash
+NUM_SAMPLES=10 RANDOM_SEED=42 OUTPUT_PATH=uc_strict_smoke.npz \
+  ./run_strict_uc_generation.sh
+```
+
+Long runs save a resumable checkpoint every 1,000 accepted samples. Restart the
+same command to resume from `<output>.partial.npz` and `<output>.partial.rng`.
+
+Run the 50,000-sample generation independently of the current terminal:
+
+```bash
+systemd-run --user --unit=aiuc-strict-uc-generation \
+  --property=WorkingDirectory="$PWD" \
+  /usr/bin/bash -lc './run_strict_uc_generation.sh > strict_uc_generation.out 2>&1'
+```
+
+Monitor the detached service and its progress log:
+
+```bash
+systemctl --user status aiuc-strict-uc-generation.service --no-pager
+tail -F strict_uc_generation.out
+```
+
+Validate a generated dataset before training:
+
+```bash
+python validate_strict_uc_dataset.py uc_new_data_strict.npz
+```
+
+The strict hourly model uses `SUcap` and `SDcap`. The available generator CSV
+does not uniquely define the intermediate output trajectory for multi-hour
+startup and shutdown processes, so those trajectories are outside this dataset
+variant.
+
 ## Experiment Log
 
 Models, datasets, and raw logs remain local because they are large. Record the

@@ -2,6 +2,7 @@
 *.npz
 *.keras
 outputs/
+*.partial.rng
 
 # SLURM and notebook runtime artifacts
 *.out
