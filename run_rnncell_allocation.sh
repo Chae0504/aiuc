@@ -26,6 +26,7 @@ python -u AIUC/train_rnncell_allocation.py \
   --output-dir "$OUTPUT_DIR" \
   --phase2-epochs 150 \
   --phase2-patience 40 \
+  --phase2-learning-rate 3e-5 \
   --reduce-lr-patience 8 \
   --reduce-lr-factor 0.5 \
   --phase2-balance-loss-weight 5 \
