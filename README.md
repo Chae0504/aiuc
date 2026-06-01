@@ -118,6 +118,31 @@ does not uniquely define the intermediate output trajectory for multi-hour
 startup and shutdown processes, so those trajectories are outside this dataset
 variant.
 
+## Strict Ramp-Aware Allocation Training
+
+After `uc_new_data_strict.npz` has been generated and validated, train the
+separate strict allocation model:
+
+```bash
+sbatch run_rnncell_strict_allocation.sh
+```
+
+This variant keeps the previous allocation baseline intact. It uses the signed
+initial duration from `IniState`, applies `SUcap` to `OFF -> ON`, blocks
+`ON -> OFF` while the previous output exceeds `SDcap`, enforces stay-online
+ramps, and blocks unverifiable terminal transitions in the same way as the
+strict dataset generator. Artifacts are written to:
+
+```text
+outputs/rnncell_strict_allocation_<job_id>/
+```
+
+Generate an experiment-log row with:
+
+```bash
+python summarize_experiment.py outputs/rnncell_strict_allocation_<job_id>
+```
+
 ## Experiment Log
 
 Models, datasets, and raw logs remain local because they are large. Record the
