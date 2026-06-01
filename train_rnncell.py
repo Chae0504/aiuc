@@ -166,11 +166,12 @@ def compile_model(
     tf,
     model,
     power_normalizer_mw,
+    demand_normalizer_mw,
     learning_rate,
     status_loss_weight,
     power_loss_weight,
 ):
-    from rnncell_model import NormalizedMeanAbsoluteError
+    from rnncell_model import NormalizedMeanAbsoluteError, PowerBalanceMismatchMAE
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
@@ -190,6 +191,11 @@ def compile_model(
             ],
             "out_power": [
                 tf.keras.metrics.MeanAbsoluteError(name="mae_mw"),
+                PowerBalanceMismatchMAE(name="mismatch_mae_mw"),
+                PowerBalanceMismatchMAE(
+                    normalizer=demand_normalizer_mw,
+                    name="normalized_mismatch",
+                ),
             ],
         },
     )
@@ -272,6 +278,7 @@ def train_two_phases(
         tf,
         model,
         power_normalizer_mw=power_normalizer_mw,
+        demand_normalizer_mw=demand_normalizer_mw,
         learning_rate=args.phase1_learning_rate,
         status_loss_weight=args.phase1_status_loss_weight,
         power_loss_weight=args.phase1_power_loss_weight,
@@ -308,6 +315,7 @@ def train_two_phases(
         tf,
         model,
         power_normalizer_mw=power_normalizer_mw,
+        demand_normalizer_mw=demand_normalizer_mw,
         learning_rate=args.phase2_learning_rate,
         status_loss_weight=args.phase2_status_loss_weight,
         power_loss_weight=args.phase2_power_loss_weight,

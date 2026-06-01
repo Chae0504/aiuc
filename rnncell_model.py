@@ -33,6 +33,42 @@ class NormalizedMeanAbsoluteError(tf.keras.losses.Loss):
 
 
 @tf.keras.utils.register_keras_serializable(package="AIUC")
+class PowerBalanceMismatchMAE(tf.keras.metrics.Metric):
+    """MAE between predicted and target total generation for each hour."""
+
+    def __init__(self, normalizer=1.0, name="mismatch_mae_mw", **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.normalizer = float(normalizer)
+        if self.normalizer <= 0:
+            raise ValueError("normalizer must be positive")
+        self.total = self.add_weight(name="total", initializer="zeros")
+        self.count = self.add_weight(name="count", initializer="zeros")
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        true_total = tf.reduce_sum(y_true, axis=-1)
+        pred_total = tf.reduce_sum(y_pred, axis=-1)
+        values = tf.abs(pred_total - true_total) / self.normalizer
+        if sample_weight is not None:
+            sample_weight = tf.cast(sample_weight, values.dtype)
+            values = values * sample_weight
+            count = tf.reduce_sum(sample_weight)
+        else:
+            count = tf.cast(tf.size(values), values.dtype)
+        self.total.assign_add(tf.reduce_sum(values))
+        self.count.assign_add(count)
+
+    def result(self):
+        return tf.math.divide_no_nan(self.total, self.count)
+
+    def reset_state(self):
+        self.total.assign(0.0)
+        self.count.assign(0.0)
+
+    def get_config(self):
+        return {**super().get_config(), "normalizer": self.normalizer}
+
+
+@tf.keras.utils.register_keras_serializable(package="AIUC")
 def ste_binarize(x):
     """Round in the forward pass while keeping a straight-through gradient."""
     return x + tf.stop_gradient(tf.round(x) - x)

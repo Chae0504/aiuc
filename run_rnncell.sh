@@ -24,4 +24,9 @@ OUTPUT_DIR="AIUC/outputs/rnncell_${SLURM_JOB_ID}"
 
 python -u AIUC/train_rnncell.py \
   --output-dir "$OUTPUT_DIR" \
+  --phase2-epochs 150 \
+  --phase2-patience 40 \
+  --reduce-lr-patience 8 \
+  --reduce-lr-factor 0.5 \
+  --phase2-balance-loss-weight 5 \
   --verbose 2

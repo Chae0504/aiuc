@@ -33,6 +33,10 @@ Monitor Phase 2 training:
 tail -F outputs/rnncell_<job_id>/phase2_training.csv
 ```
 
+The training CSV files include `out_power_mismatch_mae_mw` and
+`out_power_normalized_mismatch` so the power-balance trade-off can be monitored
+at each epoch.
+
 ## Experiment Log
 
 Models, datasets, and raw logs remain local because they are large. Record the
