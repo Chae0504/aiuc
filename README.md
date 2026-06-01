@@ -37,6 +37,33 @@ The training CSV files include `out_power_mismatch_mae_mw` and
 `out_power_normalized_mismatch` so the power-balance trade-off can be monitored
 at each epoch.
 
+## Ramp-Aware Allocation Variant
+
+The baseline model remains in `rnncell_model.py`. To train the separate variant
+that proportionally allocates residual demand over online generators within
+their ramp-aware headroom, submit:
+
+```bash
+sbatch run_rnncell_allocation.sh
+```
+
+Allocation experiments write artifacts to a separate directory:
+
+```text
+outputs/rnncell_allocation_<job_id>/
+```
+
+Generate their experiment-log row with:
+
+```bash
+python summarize_experiment.py outputs/rnncell_allocation_<job_id>
+```
+
+The allocation layer stays inside the recurrent cell so the adjusted generator
+outputs are used as the previous-hour state for the next ramp calculation.
+Residual demand that cannot be covered by the online generators remains in the
+balance loss and can still guide the commitment decision.
+
 ## Experiment Log
 
 Models, datasets, and raw logs remain local because they are large. Record the

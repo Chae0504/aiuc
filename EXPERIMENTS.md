@@ -18,6 +18,7 @@ The CPLEX reference average daily cost is 982,572.44.
 
 1. Commit code changes before submitting an experiment.
 2. Submit with `sbatch run_rnncell.sh`.
-3. Inspect `outputs/rnncell_<job_id>/evaluation.json`.
-4. Generate a summary row with `python summarize_experiment.py outputs/rnncell_<job_id>`.
+3. Inspect `outputs/rnncell_<job_id>/evaluation.json`. For the allocation
+   variant, use `outputs/rnncell_allocation_<job_id>/evaluation.json`.
+4. Generate a summary row with `python summarize_experiment.py <output_dir>`.
 5. Add the row above with a short description and commit the updated log.
