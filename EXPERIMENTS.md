@@ -11,6 +11,7 @@ The strict Gurobi reference average daily cost is 939,381.69.
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | 2026-06-02 | 22368 | 87df85e | Strict ramp-aware proportional allocation; Phase 2 balance weight=5 | 82.81% | 19.90 MW | 59.18 MW | 1.63% | 991,582.44 | Early stopped at epoch 45; restored best epoch 5. All evaluated hard-constraint violations are zero. AI daily cost is 5.56% above strict Gurobi |
 | 2026-06-02 | 22376 | 87df85e | Strict clipping baseline without allocation; Phase 2 balance weight=5 | 74.47% | 31.63 MW | 459.56 MW | 12.67% | 1,092,881.75 | Early stopped at epoch 52; restored best epoch 12. All evaluated hard-constraint violations are zero, but mismatch increased 676.55% vs 22368 and AI daily cost is 16.34% above strict Gurobi |
+| 2026-06-02 | 22377 | 1dcbce8 | Strict clipping baseline without allocation; Phase 2 balance weight=10 | 74.50% | 31.52 MW | 432.77 MW | 11.93% | 1,084,168.38 | Early stopped at epoch 64; restored best epoch 24. All evaluated hard-constraint violations are zero. Mismatch improved 5.83% vs 22376, but remains 631.28% above strict allocation and AI daily cost is 15.41% above strict Gurobi |
 
 ## Legacy Dataset
 
