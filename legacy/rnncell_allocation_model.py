@@ -13,7 +13,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 
-from rnncell_model import (
+from legacy.rnncell_model import (
     BatchZeros,
     InitialDuration,
     OnlyMismatchLoss,

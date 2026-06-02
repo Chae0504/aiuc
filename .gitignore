@@ -3,6 +3,7 @@
 *.keras
 outputs/
 *.partial.rng
+DG/*.png
 
 # SLURM and notebook runtime artifacts
 *.out

@@ -5,7 +5,7 @@ import json
 
 import numpy as np
 
-from train_rnncell import (
+from legacy.train_rnncell import (
     SCRIPT_DIR,
     configure_environment,
     evaluate,
@@ -31,7 +31,7 @@ def main():
     configure_environment(args.seed)
 
     import tensorflow as tf
-    from rnncell_allocation_model import build_hybrid_uc_allocation_model
+    from legacy.rnncell_allocation_model import build_hybrid_uc_allocation_model
 
     set_deterministic_seed(tf, args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)

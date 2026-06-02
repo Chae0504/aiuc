@@ -3,7 +3,20 @@
 Keep one row per completed experiment. Compare cost only when the power-balance
 mismatch is sufficiently small.
 
-The CPLEX reference average daily cost is 982,572.44.
+## Strict Dataset
+
+The strict Gurobi reference average daily cost is 939,381.69.
+
+| Date | Job ID | Git Commit | Description | Status Acc. | Power MAE | Mismatch MAE | Mismatch | AI Daily Cost | Notes |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 2026-06-02 | 22368 | 87df85e | Strict ramp-aware proportional allocation; Phase 2 balance weight=5 | 82.81% | 19.90 MW | 59.18 MW | 1.63% | 991,582.44 | Early stopped at epoch 45; restored best epoch 5. All evaluated hard-constraint violations are zero. AI daily cost is 5.56% above strict Gurobi |
+| 2026-06-02 | 22376 | 87df85e | Strict clipping baseline without allocation; Phase 2 balance weight=5 | 74.47% | 31.63 MW | 459.56 MW | 12.67% | 1,092,881.75 | Early stopped at epoch 52; restored best epoch 12. All evaluated hard-constraint violations are zero, but mismatch increased 676.55% vs 22368 and AI daily cost is 16.34% above strict Gurobi |
+
+## Legacy Dataset
+
+The legacy CPLEX reference average daily cost is 982,572.44. These experiments
+used the earlier dataset and clipping equations, so retain them only for
+historical comparison.
 
 | Date | Job ID | Git Commit | Description | Status Acc. | Power MAE | Mismatch MAE | Mismatch | AI Daily Cost | Notes |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -18,8 +31,9 @@ The CPLEX reference average daily cost is 982,572.44.
 ## Workflow
 
 1. Commit code changes before submitting an experiment.
-2. Submit with `sbatch run_rnncell.sh`.
-3. Inspect `outputs/rnncell_<job_id>/evaluation.json`. For the allocation
-   variant, use `outputs/rnncell_allocation_<job_id>/evaluation.json`.
+2. Submit a strict experiment with `sbatch run_rnncell_strict.sh` or
+   `sbatch run_rnncell_strict_allocation.sh`.
+3. Inspect `outputs/rnncell_strict_<job_id>/evaluation.json` or
+   `outputs/rnncell_strict_allocation_<job_id>/evaluation.json`.
 4. Generate a summary row with `python summarize_experiment.py <output_dir>`.
 5. Add the row above with a short description and commit the updated log.

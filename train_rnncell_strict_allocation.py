@@ -6,7 +6,7 @@ import json
 
 import numpy as np
 
-from train_rnncell import (
+from legacy.train_rnncell import (
     SCRIPT_DIR,
     calculate_average_cost,
     configure_environment,
@@ -21,7 +21,7 @@ from train_rnncell import (
     train_two_phases,
     validate_shapes,
 )
-from validate_strict_uc_dataset import count_minimum_time_violations
+from DG.validate_strict_uc_dataset import count_minimum_time_violations
 
 
 def load_strict_specs(path):
@@ -134,10 +134,10 @@ def evaluate_strict(model, test_inputs, demand, true_status, true_power, specs, 
 
 def main():
     args = parse_args()
-    default_data = SCRIPT_DIR / "uc_new_data.npz"
+    default_data = SCRIPT_DIR / "DG" / "uc_new_data.npz"
     default_output_dir = SCRIPT_DIR / "outputs" / "rnncell"
     if args.data == default_data:
-        args.data = SCRIPT_DIR / "uc_new_data_strict.npz"
+        args.data = SCRIPT_DIR / "DG" / "uc_new_data_strict.npz"
     if args.output_dir == default_output_dir:
         args.output_dir = SCRIPT_DIR / "outputs" / "rnncell_strict_allocation"
     configure_environment(args.seed)

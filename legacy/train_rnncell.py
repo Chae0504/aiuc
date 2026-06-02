@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
 NUM_STATIC_FEATURES = 4
 
 
@@ -21,10 +21,10 @@ def parse_args():
         description="Train the 118-bus physics-informed UC RNN."
     )
     parser.add_argument(
-        "--data", type=Path, default=SCRIPT_DIR / "uc_new_data.npz"
+        "--data", type=Path, default=SCRIPT_DIR / "DG" / "uc_new_data.npz"
     )
     parser.add_argument(
-        "--specs", type=Path, default=SCRIPT_DIR / "generator_specs.csv"
+        "--specs", type=Path, default=SCRIPT_DIR / "DG" / "generator_specs.csv"
     )
     parser.add_argument(
         "--output-dir", type=Path, default=SCRIPT_DIR / "outputs" / "rnncell"
@@ -171,7 +171,7 @@ def compile_model(
     status_loss_weight,
     power_loss_weight,
 ):
-    from rnncell_model import NormalizedMeanAbsoluteError, PowerBalanceMismatchMAE
+    from legacy.rnncell_model import NormalizedMeanAbsoluteError, PowerBalanceMismatchMAE
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
@@ -430,7 +430,7 @@ def main():
     configure_environment(args.seed)
 
     import tensorflow as tf
-    from rnncell_model import build_hybrid_uc_model
+    from legacy.rnncell_model import build_hybrid_uc_model
 
     set_deterministic_seed(tf, args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)

@@ -14,7 +14,12 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 
-from rnncell_model import BatchZeros, OnlyMismatchLoss, PhysicsInformedUCCell, ste_binarize
+from legacy.rnncell_model import (
+    BatchZeros,
+    OnlyMismatchLoss,
+    PhysicsInformedUCCell,
+    ste_binarize,
+)
 
 
 @tf.keras.utils.register_keras_serializable(package="AIUC")
@@ -115,6 +120,18 @@ class StrictRampAwareAllocationUCCell(PhysicsInformedUCCell):
         )
         p_clip = tf.minimum(tf.maximum(p_raw, p_lower), p_upper) * u_final
 
+        p_final = self._finalize_power(
+            demand_mw, p_clip, p_lower, p_upper, u_final
+        )
+
+        hon_new = u_final * (hon_prev + 1.0)
+        hoff_new = (1.0 - u_final) * (hoff_prev + 1.0)
+        new_states = (h_new, c_new, p_final, u_final, hon_new, hoff_new)
+        output = tf.concat([u_masked, p_final], axis=-1)
+        return output, new_states
+
+    def _finalize_power(self, demand_mw, p_clip, p_lower, p_upper, u_final):
+        """Allocate residual demand over the physically available headroom."""
         p_upper_online = p_upper * u_final
         p_lower_online = p_lower * u_final
         residual_mw = demand_mw - tf.reduce_sum(p_clip, axis=-1)
@@ -133,13 +150,7 @@ class StrictRampAwareAllocationUCCell(PhysicsInformedUCCell):
             * tf.sign(residual_mw[:, tf.newaxis])
         )
         p_final = p_clip + adjustment
-        p_final = tf.minimum(tf.maximum(p_final, p_lower_online), p_upper_online)
-
-        hon_new = u_final * (hon_prev + 1.0)
-        hoff_new = (1.0 - u_final) * (hoff_prev + 1.0)
-        new_states = (h_new, c_new, p_final, u_final, hon_new, hoff_new)
-        output = tf.concat([u_masked, p_final], axis=-1)
-        return output, new_states
+        return tf.minimum(tf.maximum(p_final, p_lower_online), p_upper_online)
 
     def get_config(self):
         return {

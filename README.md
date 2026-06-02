@@ -4,10 +4,11 @@ Physics-informed recurrent neural network experiments for unit commitment.
 
 ## SLURM Training
 
-Submit the modular RNN-cell training job:
+Legacy RNN-cell workflows are retained under `legacy/` for historical
+comparison. Submit the original modular RNN-cell training job with:
 
 ```bash
-sbatch run_rnncell.sh
+sbatch legacy/run_rnncell.sh
 ```
 
 Each SLURM job writes artifacts to its own directory:
@@ -39,12 +40,12 @@ at each epoch.
 
 ## Ramp-Aware Allocation Variant
 
-The baseline model remains in `rnncell_model.py`. To train the separate variant
+The legacy baseline model remains in `legacy/rnncell_model.py`. To train the separate variant
 that proportionally allocates residual demand over online generators within
 their ramp-aware headroom, submit:
 
 ```bash
-sbatch run_rnncell_allocation.sh
+sbatch legacy/run_rnncell_allocation.sh
 ```
 
 Allocation experiments write artifacts to a separate directory:
@@ -66,27 +67,27 @@ balance loss and can still guide the commitment decision.
 
 ## Strict UC Dataset Generation
 
-The original `uc_new_data.npz` is preserved for comparison. Generate a separate
+The original `DG/uc_new_data.npz` is preserved for comparison. Generate a separate
 50,000-sample dataset with hard power-balance, capacity, startup, shutdown,
 ramp, and minimum-time constraints on this server:
 
 ```bash
 module load julia/1.11.3 gurobi/13.0.1
-julia --project=. -e 'using Pkg; Pkg.instantiate()'
-./run_strict_uc_generation.sh
+julia --project=DG -e 'using Pkg; Pkg.instantiate()'
+./DG/run_strict_uc_generation.sh
 ```
 
-The generator reads `generator_specs.csv` and writes:
+The generator reads `DG/generator_specs.csv` and writes:
 
 ```text
-uc_new_data_strict.npz
+DG/uc_new_data_strict.npz
 ```
 
 Generation is reproducible and configurable through environment variables:
 
 ```bash
 NUM_SAMPLES=10 RANDOM_SEED=42 OUTPUT_PATH=uc_strict_smoke.npz \
-  ./run_strict_uc_generation.sh
+  ./DG/run_strict_uc_generation.sh
 ```
 
 Long runs save a resumable checkpoint every 1,000 accepted samples. Restart the
@@ -97,20 +98,26 @@ Run the 50,000-sample generation independently of the current terminal:
 ```bash
 systemd-run --user --unit=aiuc-strict-uc-generation \
   --property=WorkingDirectory="$PWD" \
-  /usr/bin/bash -lc './run_strict_uc_generation.sh > strict_uc_generation.out 2>&1'
+  /usr/bin/bash -lc './DG/run_strict_uc_generation.sh > DG/strict_uc_generation.out 2>&1'
 ```
 
 Monitor the detached service and its progress log:
 
 ```bash
 systemctl --user status aiuc-strict-uc-generation.service --no-pager
-tail -F strict_uc_generation.out
+tail -F DG/strict_uc_generation.out
 ```
 
 Validate a generated dataset before training:
 
 ```bash
-python validate_strict_uc_dataset.py uc_new_data_strict.npz
+python DG/validate_strict_uc_dataset.py DG/uc_new_data_strict.npz
+```
+
+Visualize the hourly mean demand and 10 reproducibly sampled profiles:
+
+```bash
+python DG/visualize_strict_demand.py
 ```
 
 The strict hourly model uses `SUcap` and `SDcap`. The available generator CSV
@@ -120,12 +127,16 @@ variant.
 
 ## Strict Ramp-Aware Allocation Training
 
-After `uc_new_data_strict.npz` has been generated and validated, train the
+After `DG/uc_new_data_strict.npz` has been generated and validated, train the
 separate strict allocation model:
 
 ```bash
 sbatch run_rnncell_strict_allocation.sh
 ```
+
+Use this runner for new strict-data experiments. The older
+`legacy/run_rnncell.sh` and `legacy/run_rnncell_allocation.sh` workflows remain available only for legacy
+comparison runs.
 
 This variant keeps the previous allocation baseline intact. It uses the signed
 initial duration from `IniState`, applies `SUcap` to `OFF -> ON`, blocks
@@ -141,6 +152,21 @@ Generate an experiment-log row with:
 
 ```bash
 python summarize_experiment.py outputs/rnncell_strict_allocation_<job_id>
+```
+
+## Strict-Clipping Baseline
+
+To measure the allocation layer's contribution, train a strict baseline that
+uses the same corrected transition clipping without proportional allocation:
+
+```bash
+sbatch run_rnncell_strict.sh
+```
+
+Its artifacts are written to:
+
+```text
+outputs/rnncell_strict_<job_id>/
 ```
 
 ## Experiment Log
