@@ -5,7 +5,7 @@ import unittest
 
 import tensorflow as tf
 
-from rnncell_strict_model import StrictClippingUCCell
+from baselines.strict_clipping.rnncell_strict_model import StrictClippingUCCell
 
 
 class StrictClippingUCCellTest(unittest.TestCase):

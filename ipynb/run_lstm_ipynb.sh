@@ -18,7 +18,7 @@ cd /home/yoonjoo_chae
 
 export PYTHONUNBUFFERED=1
 
-python -u AIUC/run_notebook_live.py \
-  AIUC/uc_118_LSTM.ipynb \
-  --output AIUC/uc_118_LSTM_executed.ipynb \
+python -u AIUC/ipynb/run_notebook_live.py \
+  AIUC/ipynb/uc_118_LSTM.ipynb \
+  --output AIUC/ipynb/uc_118_LSTM_executed.ipynb \
   --timeout -1

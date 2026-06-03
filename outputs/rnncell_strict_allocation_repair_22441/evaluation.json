@@ -1,0 +1,26 @@
+{
+  "status_accuracy_percent": 75.89138888888888,
+  "power_mae_mw": 22.449718475341797,
+  "mismatch_mae_mw": 2.038402557373047,
+  "mismatch_percent_of_mean_demand": 0.05621204778143669,
+  "ghost_power_mw": 0.0,
+  "capacity_violation_mw": 0.0,
+  "ramp_violation_mw": 1.391251913673841e-07,
+  "startup_cap_violation_mw": 0.0,
+  "shutdown_cap_violation_mw": 0.0,
+  "minimum_time_violations_total": 0,
+  "cplex_average_daily_cost": 939381.6875,
+  "ai_average_daily_cost": 1048823.0,
+  "diagnostic_replay": {
+    "note": "Replay of the saved model on the same test split; preserve the top-level training-completion metrics as the official result.",
+    "mismatch_mae_mw": 2.0089190006256104,
+    "mismatch_percent_of_mean_demand": 0.055398993905175144,
+    "mismatch_max_mw": 859.0263671875,
+    "mismatch_p95_mw": 0.00048828125,
+    "mismatch_p99_mw": 71.71817016601562,
+    "mismatch_over_10mw_percent": 1.6766666666666665,
+    "shortage_mae_mw": 0.7292451858520508,
+    "excess_mae_mw": 1.27967369556427,
+    "ai_average_daily_cost": 1048893.625
+  }
+}

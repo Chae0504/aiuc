@@ -1,0 +1,20 @@
+{
+  "status_accuracy_percent": 71.98810185185185,
+  "power_mae_mw": 18.702255249023438,
+  "mismatch_mae_mw": 2.4957375526428223,
+  "mismatch_percent_of_mean_demand": 0.06882375517615175,
+  "mismatch_max_mw": 376.0946044921875,
+  "mismatch_p95_mw": 0.00048828125,
+  "mismatch_p99_mw": 107.21902465820312,
+  "mismatch_over_10mw_percent": 2.3208333333333333,
+  "shortage_mae_mw": 0.00799831748008728,
+  "excess_mae_mw": 2.487739086151123,
+  "ghost_power_mw": 0.0,
+  "capacity_violation_mw": 0.0,
+  "ramp_violation_mw": 5.639394018430721e-08,
+  "startup_cap_violation_mw": 0.0,
+  "shutdown_cap_violation_mw": 0.0,
+  "minimum_time_violations_total": 0,
+  "cplex_average_daily_cost": 939381.6875,
+  "ai_average_daily_cost": 1020904.4375
+}

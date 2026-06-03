@@ -16,13 +16,13 @@ module load cuda/12.8.1
 module load cudnn/cuda12/9.8.0.87
 
 source /home/yoonjoo_chae/myenv/bin/activate
-cd /home/yoonjoo_chae
+cd /home/yoonjoo_chae/AIUC
 
 export PYTHONUNBUFFERED=1
 
-OUTPUT_DIR="AIUC/outputs/rnncell_strict_${SLURM_JOB_ID}"
-DATA_PATH="AIUC/DG/uc_new_data_strict.npz"
-SPECS_PATH="AIUC/DG/generator_specs.csv"
+OUTPUT_DIR="outputs/rnncell_strict_${SLURM_JOB_ID}"
+DATA_PATH="DG/uc_new_data_strict.npz"
+SPECS_PATH="DG/generator_specs.csv"
 
 python - "$DATA_PATH" <<'PY'
 import sys
@@ -45,7 +45,7 @@ with np.load(path) as data:
 print(f"Strict UC dataset preflight passed: {path}")
 PY
 
-python -u AIUC/train_rnncell_strict.py \
+python -u -m baselines.strict_clipping.train_rnncell_strict \
   --data "$DATA_PATH" \
   --specs "$SPECS_PATH" \
   --output-dir "$OUTPUT_DIR" \

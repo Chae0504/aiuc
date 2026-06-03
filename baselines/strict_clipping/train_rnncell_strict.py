@@ -36,7 +36,7 @@ def main():
     configure_environment(args.seed)
 
     import tensorflow as tf
-    from rnncell_strict_model import build_hybrid_uc_strict_model
+    from baselines.strict_clipping.rnncell_strict_model import build_hybrid_uc_strict_model
 
     set_deterministic_seed(tf, args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)

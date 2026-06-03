@@ -95,7 +95,9 @@ def evaluate_strict(model, test_inputs, demand, true_status, true_power, specs, 
     stay_online = (previous_status > 0.5) & online
 
     pred_total_power = np.sum(pred_power, axis=-1)
-    mismatch = float(np.mean(np.abs(pred_total_power - demand.squeeze(-1))))
+    power_balance_error = pred_total_power - demand.squeeze(-1)
+    absolute_mismatch = np.abs(power_balance_error)
+    mismatch = float(np.mean(absolute_mismatch))
     ghost = np.maximum(pred_power, 0.0) * ~online
     capacity = (
         np.maximum(pred_power - specs["p_max"], 0.0)
@@ -119,6 +121,12 @@ def evaluate_strict(model, test_inputs, demand, true_status, true_power, specs, 
         "power_mae_mw": float(np.mean(np.abs(pred_power - true_power))),
         "mismatch_mae_mw": mismatch,
         "mismatch_percent_of_mean_demand": mismatch / mean_demand * 100,
+        "mismatch_max_mw": float(np.max(absolute_mismatch)),
+        "mismatch_p95_mw": float(np.percentile(absolute_mismatch, 95)),
+        "mismatch_p99_mw": float(np.percentile(absolute_mismatch, 99)),
+        "mismatch_over_10mw_percent": float(np.mean(absolute_mismatch > 10.0) * 100),
+        "shortage_mae_mw": float(np.mean(np.maximum(-power_balance_error, 0.0))),
+        "excess_mae_mw": float(np.mean(np.maximum(power_balance_error, 0.0))),
         "ghost_power_mw": float(np.mean(np.sum(ghost, axis=-1))),
         "capacity_violation_mw": float(np.mean(np.sum(capacity, axis=-1))),
         "ramp_violation_mw": float(np.mean(np.sum(ramp, axis=-1))),
@@ -132,19 +140,23 @@ def evaluate_strict(model, test_inputs, demand, true_status, true_power, specs, 
     }
 
 
-def main():
+def train_and_evaluate(
+    build_model,
+    *,
+    default_output_name,
+    saved_model_name,
+    model_variant,
+):
     args = parse_args()
     default_data = SCRIPT_DIR / "DG" / "uc_new_data.npz"
     default_output_dir = SCRIPT_DIR / "outputs" / "rnncell"
     if args.data == default_data:
         args.data = SCRIPT_DIR / "DG" / "uc_new_data_strict.npz"
     if args.output_dir == default_output_dir:
-        args.output_dir = SCRIPT_DIR / "outputs" / "rnncell_strict_allocation"
+        args.output_dir = SCRIPT_DIR / "outputs" / default_output_name
     configure_environment(args.seed)
 
     import tensorflow as tf
-    from rnncell_strict_allocation_model import build_hybrid_uc_strict_allocation_model
-
     set_deterministic_seed(tf, args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -177,7 +189,7 @@ def main():
         f"average training demand={demand_normalizer_mw:.2f} MW",
         flush=True,
     )
-    model = build_hybrid_uc_strict_allocation_model(
+    model = build_model(
         specs,
         demand_normalizer_mw=demand_normalizer_mw,
         balance_loss_weight=args.phase1_balance_loss_weight,
@@ -195,7 +207,7 @@ def main():
         demand_normalizer_mw,
         args,
     )
-    model.save(args.output_dir / "saved_uc_RC_strict_allocation_model.keras")
+    model.save(args.output_dir / saved_model_name)
     save_json(
         args.output_dir / "training_history.json",
         {"phase1": phase1_history, "phase2": phase2_history},
@@ -208,7 +220,7 @@ def main():
             "specs": str(args.specs),
             "output_dir": str(args.output_dir),
             "git_commit": get_git_commit(),
-            "model_variant": "strict_ramp_aware_proportional_allocation",
+            "model_variant": model_variant,
             "power_normalizer_mw": power_normalizer_mw,
             "demand_normalizer_mw": demand_normalizer_mw,
         },
@@ -230,6 +242,17 @@ def main():
         print(json.dumps(metrics, indent=2), flush=True)
 
     print(f"\nArtifacts saved in: {args.output_dir}", flush=True)
+
+
+def main():
+    from rnncell_strict_allocation_model import build_hybrid_uc_strict_allocation_model
+
+    train_and_evaluate(
+        build_hybrid_uc_strict_allocation_model,
+        default_output_name="rnncell_strict_allocation",
+        saved_model_name="saved_uc_RC_strict_allocation_model.keras",
+        model_variant="strict_ramp_aware_proportional_allocation",
+    )
 
 
 if __name__ == "__main__":

@@ -154,13 +154,84 @@ Generate an experiment-log row with:
 python summarize_experiment.py outputs/rnncell_strict_allocation_<job_id>
 ```
 
-## Strict-Clipping Baseline
+## MUT/MDT-Aware Commitment Repair
 
-To measure the allocation layer's contribution, train a strict baseline that
-uses the same corrected transition clipping without proportional allocation:
+Train the separate strict allocation variant that repairs commitment only
+through transitions allowed by minimum-time, shutdown-cap, and terminal
+constraints:
 
 ```bash
-sbatch run_rnncell_strict.sh
+sbatch run_rnncell_strict_allocation_repair.sh
+```
+
+The repair first keeps or starts eligible generators until online upper bounds
+can cover demand. It then removes a safe low-score prefix only when the
+remaining upper bounds can still cover demand. This vectorized prefix rule is
+deliberately conservative. If allowed transitions are insufficient, the model
+preserves the hard constraints and leaves the remaining mismatch.
+This is an hourly greedy repair layer, not a replacement for horizon-wide UC
+cost optimization.
+
+Artifacts are written to:
+
+```text
+outputs/rnncell_strict_allocation_repair_<job_id>/
+```
+
+## Look-Ahead Commitment Repair
+
+To compare the hourly repair baseline with a future-aware shutdown rule, submit:
+
+```bash
+sbatch run_rnncell_strict_allocation_lookahead_repair.sh
+```
+
+This separate variant exposes the next `max(MDT)=15` demand values to the hard
+repair layer. Before removing a low-score generator, it verifies that the
+ramp-aware upper bounds of the remaining commitment can cover the look-ahead
+demand window. A removed generator is counted again only from its earliest
+MDT-feasible restart, with `SUcap` and subsequent ramps applied. The check is
+vectorized over generators and future hours. AI-proposed `ON -> OFF`
+transitions are also reconsidered by the same check before they become final.
+
+The rule targets tail shortage after premature shutdown. It remains a
+conservative feasibility heuristic, not a horizon-wide economic UC optimizer.
+Artifacts are written to:
+
+```text
+outputs/rnncell_strict_allocation_lookahead_repair_<job_id>/
+```
+
+## Cost-Aware Allocation
+
+To keep the look-ahead commitment repair while dispatching online units in
+economic merit order, submit:
+
+```bash
+sbatch run_rnncell_strict_allocation_cost_aware.sh
+```
+
+This branch preserves the repaired commitment and replaces proportional
+headroom allocation with a cost-aware allocation over the same ramp-aware
+`L_i,t` and `U_i,t` bounds. It starts online units at their lower bounds, then
+fills residual demand from the lowest `SlopeVarCost` headroom first. The layer
+targets the excess-generation and cost increase observed in the conservative
+look-ahead repair branch.
+
+Artifacts are written to:
+
+```text
+outputs/rnncell_strict_allocation_cost_aware_<job_id>/
+```
+
+## Strict-Clipping Baseline
+
+To measure the allocation layer's contribution, the strict-clipping baseline is
+kept under `baselines/strict_clipping/`. It uses the same corrected transition
+clipping without proportional allocation:
+
+```bash
+sbatch baselines/strict_clipping/run_rnncell_strict.sh
 ```
 
 Its artifacts are written to:

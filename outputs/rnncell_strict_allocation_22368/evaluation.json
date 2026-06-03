@@ -1,0 +1,14 @@
+{
+  "status_accuracy_percent": 82.81226851851852,
+  "power_mae_mw": 19.90436363220215,
+  "mismatch_mae_mw": 59.179298400878906,
+  "mismatch_percent_of_mean_demand": 1.6319590737117133,
+  "ghost_power_mw": 0.0,
+  "capacity_violation_mw": 0.0,
+  "ramp_violation_mw": 3.4751096222862543e-07,
+  "startup_cap_violation_mw": 0.0,
+  "shutdown_cap_violation_mw": 0.0,
+  "minimum_time_violations_total": 0,
+  "cplex_average_daily_cost": 939381.6875,
+  "ai_average_daily_cost": 991582.4375
+}

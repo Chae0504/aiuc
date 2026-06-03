@@ -118,6 +118,20 @@ class StrictRampAwareAllocationUCCell(PhysicsInformedUCCell):
             tf.maximum(self.p_min, p_prev - self.rd),
             self.p_min,
         )
+        u_final, u_output = self._repair_commitment(
+            cell_inputs=inputs,
+            demand_mw=demand_mw,
+            u_ai=u_ai,
+            u_masked=u_masked,
+            u_final=u_final,
+            p_prev=p_prev,
+            was_online=was_online,
+            hon_prev=hon_prev,
+            hoff_prev=hoff_prev,
+            remaining_hours=remaining_hours,
+            p_lower=p_lower,
+            p_upper=p_upper,
+        )
         p_clip = tf.minimum(tf.maximum(p_raw, p_lower), p_upper) * u_final
 
         p_final = self._finalize_power(
@@ -127,8 +141,38 @@ class StrictRampAwareAllocationUCCell(PhysicsInformedUCCell):
         hon_new = u_final * (hon_prev + 1.0)
         hoff_new = (1.0 - u_final) * (hoff_prev + 1.0)
         new_states = (h_new, c_new, p_final, u_final, hon_new, hoff_new)
-        output = tf.concat([u_masked, p_final], axis=-1)
+        output = tf.concat([u_output, p_final], axis=-1)
         return output, new_states
+
+    def _repair_commitment(
+        self,
+        cell_inputs,
+        demand_mw,
+        u_ai,
+        u_masked,
+        u_final,
+        p_prev,
+        was_online,
+        hon_prev,
+        hoff_prev,
+        remaining_hours,
+        p_lower,
+        p_upper,
+    ):
+        """Provide an override point for constraint-preserving status repair."""
+        del (
+            cell_inputs,
+            demand_mw,
+            u_ai,
+            p_prev,
+            was_online,
+            hon_prev,
+            hoff_prev,
+            remaining_hours,
+            p_lower,
+            p_upper,
+        )
+        return u_final, u_masked
 
     def _finalize_power(self, demand_mw, p_clip, p_lower, p_upper, u_final):
         """Allocate residual demand over the physically available headroom."""
@@ -166,7 +210,14 @@ def build_hybrid_uc_strict_allocation_model(
     balance_loss_weight,
     num_hours=24,
     num_static_features=4,
+    cell_class=StrictRampAwareAllocationUCCell,
+    cell_name="strict_ramp_aware_allocation_uc_cell",
+    model_name="physics_informed_uc_rnn_strict_allocation",
+    cell_kwargs=None,
+    extra_decoder_context_fn=None,
 ):
+    if cell_kwargs is None:
+        cell_kwargs = {}
     num_gens = len(specs["p_max"])
     input_dynamic = Input(shape=(num_hours, 1), name="demand_input")
     input_static = Input(
@@ -190,11 +241,14 @@ def build_hybrid_uc_strict_allocation_model(
     encoded = Bidirectional(
         LSTM(128, return_sequences=True), name="bi_lstm_stack_2"
     )(encoded)
+    extra_decoder_context = []
+    if extra_decoder_context_fn is not None:
+        extra_decoder_context = list(extra_decoder_context_fn(input_dynamic))
     decoder_input = Concatenate(axis=-1, name="decoder_demand_context")(
-        [input_dynamic, remaining_hours, encoded]
+        [input_dynamic, remaining_hours, *extra_decoder_context, encoded]
     )
 
-    custom_cell = StrictRampAwareAllocationUCCell(
+    custom_cell = cell_class(
         hidden_dim=128,
         num_gens=num_gens,
         mut_vals=specs["mut"],
@@ -205,7 +259,8 @@ def build_hybrid_uc_strict_allocation_model(
         ramp_down_vals=specs["ramp_down"],
         startup_cap_vals=specs["startup_cap"],
         shutdown_cap_vals=specs["shutdown_cap"],
-        name="strict_ramp_aware_allocation_uc_cell",
+        name=cell_name,
+        **cell_kwargs,
     )
     rnn_outputs = RNN(
         custom_cell, return_sequences=True, name="physics_rnn_decoder"
@@ -239,5 +294,5 @@ def build_hybrid_uc_strict_allocation_model(
             input_init_down_hours,
         ],
         outputs=[out_status, out_power],
-        name="physics_informed_uc_rnn_strict_allocation",
+        name=model_name,
     )
