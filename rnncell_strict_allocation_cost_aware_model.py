@@ -58,6 +58,7 @@ def build_hybrid_uc_strict_allocation_cost_aware_model(
     num_hours=24,
     num_static_features=4,
     lookahead_hours=None,
+    lookahead_safety_margin_mw=0.0,
 ):
     if lookahead_hours is None:
         lookahead_hours = int(np.max(specs["mdt"]))
@@ -81,6 +82,7 @@ def build_hybrid_uc_strict_allocation_cost_aware_model(
         model_name="physics_informed_uc_rnn_strict_allocation_cost_aware",
         cell_kwargs={
             "lookahead_hours": lookahead_hours,
+            "lookahead_safety_margin_mw": lookahead_safety_margin_mw,
             "linear_cost_vals": specs["linear_cost"],
         },
         extra_decoder_context_fn=make_extra_decoder_context,

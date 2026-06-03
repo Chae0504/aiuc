@@ -16,6 +16,9 @@ The strict Gurobi reference average daily cost is 939,381.69.
 
 ### Strict Allocation Variants
 
+Safety-margin runs from `22454` are recorded separately in
+`MARGIN_EXPERIMENTS.md`.
+
 | Date | Job ID | Git Commit | Description | Status Acc. | Power MAE | Mismatch MAE (% demand) | Cost Diff. | Mismatch Max | Mismatch >10MW | Shortage / Excess MAE | Notes |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 2026-06-02 | 22368 | 87df85e | Proportional allocation; Phase 2 balance weight=5 | 82.81% | 19.90 MW | 59.18 MW (1.63%) | +5.56% | N/A | N/A | N/A | Early stopped at epoch 45; restored best epoch 5. Tail metrics were not recorded by the old evaluator |
@@ -47,11 +50,15 @@ historical comparison.
    `sbatch run_rnncell_strict_allocation.sh` or
    `sbatch run_rnncell_strict_allocation_repair.sh` or
    `sbatch run_rnncell_strict_allocation_lookahead_repair.sh` or
-   `sbatch run_rnncell_strict_allocation_cost_aware.sh`.
+   `sbatch run_rnncell_strict_allocation_cost_aware.sh` or
+   `sbatch run_rnncell_strict_allocation_cost_aware_margin.sh` or
+   `sbatch run_rnncell_strict_allocation_startup_repair.sh`.
 3. Inspect `outputs/rnncell_strict_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_repair_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_lookahead_repair_<job_id>/evaluation.json` or
-   `outputs/rnncell_strict_allocation_cost_aware_<job_id>/evaluation.json`.
+   `outputs/rnncell_strict_allocation_cost_aware_<job_id>/evaluation.json` or
+   `outputs/rnncell_strict_allocation_cost_aware_margin_<margin>_<job_id>/evaluation.json` or
+   `outputs/rnncell_strict_allocation_startup_repair_<job_id>/evaluation.json`.
 4. Generate a summary row with `python summarize_experiment.py <output_dir>`.
 5. Add the row above with a short description and commit the updated log.

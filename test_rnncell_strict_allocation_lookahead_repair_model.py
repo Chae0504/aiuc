@@ -22,7 +22,7 @@ class FutureDemandWindowTest(unittest.TestCase):
 
 
 class LookAheadCommitmentRepairUCCellTest(unittest.TestCase):
-    def make_cell(self):
+    def make_cell(self, lookahead_safety_margin_mw=0.0):
         cell = LookAheadCommitmentRepairUCCell(
             hidden_dim=2,
             num_gens=2,
@@ -35,6 +35,7 @@ class LookAheadCommitmentRepairUCCellTest(unittest.TestCase):
             startup_cap_vals=[10.0, 10.0],
             shutdown_cap_vals=[10.0, 10.0],
             lookahead_hours=4,
+            lookahead_safety_margin_mw=lookahead_safety_margin_mw,
         )
         cell.build((1, 6))
         cell.dense_u.kernel.assign(tf.zeros_like(cell.dense_u.kernel))
@@ -42,8 +43,13 @@ class LookAheadCommitmentRepairUCCellTest(unittest.TestCase):
         cell.dense_p.bias.assign(tf.zeros_like(cell.dense_p.bias))
         return cell
 
-    def call_cell(self, future_demand, status_bias=(20.0, 10.0)):
-        cell = self.make_cell()
+    def call_cell(
+        self,
+        future_demand,
+        status_bias=(20.0, 10.0),
+        lookahead_safety_margin_mw=0.0,
+    ):
+        cell = self.make_cell(lookahead_safety_margin_mw)
         cell.dense_u.bias.assign(status_bias)
         zero_hidden = tf.zeros((1, 2))
         output, _ = cell(
@@ -86,6 +92,14 @@ class LookAheadCommitmentRepairUCCellTest(unittest.TestCase):
         )
         self.assertGreater(float(output[0]), 0.5)
         self.assertLess(float(output[1]), 0.5)
+
+    def test_safety_margin_blocks_shutdown_near_future_capacity_limit(self):
+        output = self.call_cell(
+            [20.0, 20.0, 20.0, 20.0],
+            lookahead_safety_margin_mw=25.0,
+        )
+        self.assertGreater(float(output[0]), 0.5)
+        self.assertGreater(float(output[1]), 0.5)
 
 
 if __name__ == "__main__":

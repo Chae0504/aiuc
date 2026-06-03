@@ -2,6 +2,7 @@
 """Train and evaluate the strict ramp-aware proportional-allocation UC RNN."""
 
 import csv
+import inspect
 import json
 
 import numpy as np
@@ -189,11 +190,16 @@ def train_and_evaluate(
         f"average training demand={demand_normalizer_mw:.2f} MW",
         flush=True,
     )
+    model_kwargs = {}
+    if "lookahead_safety_margin_mw" in inspect.signature(build_model).parameters:
+        model_kwargs["lookahead_safety_margin_mw"] = args.lookahead_safety_margin_mw
+
     model = build_model(
         specs,
         demand_normalizer_mw=demand_normalizer_mw,
         balance_loss_weight=args.phase1_balance_loss_weight,
         num_hours=demand.shape[1],
+        **model_kwargs,
     )
     model.summary()
     phase1_history, phase2_history = train_two_phases(

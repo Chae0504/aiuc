@@ -40,11 +40,17 @@ class FutureDemandWindow(Layer):
 class LookAheadCommitmentRepairUCCell(MutMdtAwareCommitmentRepairUCCell):
     """Block shutdowns that would create ramp-aware shortage before restart."""
 
-    def __init__(self, lookahead_hours, **kwargs):
+    def __init__(self, lookahead_hours, lookahead_safety_margin_mw=0.0, **kwargs):
         super().__init__(**kwargs)
         self.lookahead_hours = int(lookahead_hours)
         if self.lookahead_hours < 1:
             raise ValueError("lookahead_hours must be positive")
+        self.lookahead_safety_margin_mw = float(lookahead_safety_margin_mw)
+        if self.lookahead_safety_margin_mw < 0.0:
+            raise ValueError("lookahead_safety_margin_mw must be non-negative")
+        self.lookahead_safety_margin = tf.constant(
+            self.lookahead_safety_margin_mw, dtype=tf.float32
+        )
 
     def _prepare_status_for_removal(self, status, was_online):
         """Reconsider AI-proposed shutdowns under the future-capacity check."""
@@ -77,13 +83,7 @@ class LookAheadCommitmentRepairUCCell(MutMdtAwareCommitmentRepairUCCell):
             candidate_lower, axis=-1, exclusive=True
         )
 
-        demand_window = tf.concat(
-            [
-                demand_mw[:, tf.newaxis],
-                cell_inputs[:, 2 : 2 + self.lookahead_hours],
-            ],
-            axis=-1,
-        )
+        demand_window = self._demand_window(demand_mw, cell_inputs)
         kept_upper = self._upper_if_kept_online(p_prev, was_online)
         restart_upper = self._upper_after_earliest_restart(
             was_online, hoff_prev, remaining_hours
@@ -151,6 +151,18 @@ class LookAheadCommitmentRepairUCCell(MutMdtAwareCommitmentRepairUCCell):
         )
         return tf.where(can_restart, restart_upper, 0.0)
 
+    def _demand_window(self, demand_mw, cell_inputs):
+        return (
+            tf.concat(
+                [
+                    demand_mw[:, tf.newaxis],
+                    cell_inputs[:, 2 : 2 + self.lookahead_hours],
+                ],
+                axis=-1,
+            )
+            + self.lookahead_safety_margin
+        )
+
     def _lookahead_offsets(self):
         return tf.cast(
             tf.range(self.lookahead_hours + 1)[tf.newaxis, :, tf.newaxis],
@@ -158,7 +170,11 @@ class LookAheadCommitmentRepairUCCell(MutMdtAwareCommitmentRepairUCCell):
         )
 
     def get_config(self):
-        return {**super().get_config(), "lookahead_hours": self.lookahead_hours}
+        return {
+            **super().get_config(),
+            "lookahead_hours": self.lookahead_hours,
+            "lookahead_safety_margin_mw": self.lookahead_safety_margin_mw,
+        }
 
 
 def build_hybrid_uc_strict_allocation_lookahead_repair_model(
@@ -168,6 +184,7 @@ def build_hybrid_uc_strict_allocation_lookahead_repair_model(
     num_hours=24,
     num_static_features=4,
     lookahead_hours=None,
+    lookahead_safety_margin_mw=0.0,
 ):
     if lookahead_hours is None:
         lookahead_hours = int(np.max(specs["mdt"]))
@@ -189,6 +206,9 @@ def build_hybrid_uc_strict_allocation_lookahead_repair_model(
         cell_class=LookAheadCommitmentRepairUCCell,
         cell_name="lookahead_commitment_repair_uc_cell",
         model_name="physics_informed_uc_rnn_strict_allocation_lookahead_repair",
-        cell_kwargs={"lookahead_hours": lookahead_hours},
+        cell_kwargs={
+            "lookahead_hours": lookahead_hours,
+            "lookahead_safety_margin_mw": lookahead_safety_margin_mw,
+        },
         extra_decoder_context_fn=make_extra_decoder_context,
     )

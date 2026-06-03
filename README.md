@@ -224,6 +224,40 @@ Artifacts are written to:
 outputs/rnncell_strict_allocation_cost_aware_<job_id>/
 ```
 
+To test a reserve buffer in the look-ahead shutdown check, submit:
+
+```bash
+sbatch run_rnncell_strict_allocation_cost_aware_margin.sh
+```
+
+The default margin is `25 MW`. Override it per submission with:
+
+```bash
+LOOKAHEAD_SAFETY_MARGIN_MW=10 sbatch run_rnncell_strict_allocation_cost_aware_margin.sh
+```
+
+The margin changes the look-ahead feasibility test from `capacity >= demand`
+to `capacity >= demand + margin`, targeting rare shortage tails such as
+`mismatch_max_mw` and `mismatch_over_10mw_percent`.
+
+To instead start eligible offline units early when future ramp-aware capacity
+is short, submit:
+
+```bash
+sbatch run_rnncell_strict_allocation_startup_repair.sh
+```
+
+This branch keeps the cost-aware allocation from `22454`, but adds a proactive
+startup repair before the shutdown-removal pass. It targets rare cases where
+the model has the correct commitment at the peak hour but starts too many units
+one hour late, leaving them limited by `SUcap` and ramp-up constraints.
+
+Artifacts are written to:
+
+```text
+outputs/rnncell_strict_allocation_startup_repair_<job_id>/
+```
+
 ## Strict-Clipping Baseline
 
 To measure the allocation layer's contribution, the strict-clipping baseline is

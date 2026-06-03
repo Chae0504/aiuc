@@ -22,6 +22,12 @@ def main():
     config = load_json(args.output_dir / "run_configuration.json")
     metrics = load_json(args.output_dir / "evaluation.json")
     job_id = args.output_dir.name.removeprefix(
+        "rnncell_strict_allocation_startup_repair_"
+    )
+    job_id = job_id.removeprefix(
+        "rnncell_strict_allocation_cost_aware_margin_"
+    )
+    job_id = job_id.removeprefix(
         "rnncell_strict_allocation_cost_aware_"
     )
     job_id = job_id.removeprefix(

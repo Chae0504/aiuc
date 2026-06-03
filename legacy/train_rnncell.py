@@ -46,6 +46,15 @@ def parse_args():
     parser.add_argument("--reduce-lr-patience", type=int, default=8)
     parser.add_argument("--reduce-lr-factor", type=float, default=0.5)
     parser.add_argument("--min-learning-rate", type=float, default=1e-6)
+    parser.add_argument(
+        "--lookahead-safety-margin-mw",
+        type=float,
+        default=0.0,
+        help=(
+            "Extra MW reserve required by look-ahead shutdown checks. "
+            "Used only by look-ahead repair variants."
+        ),
+    )
     parser.add_argument("--limit-samples", type=int)
     parser.add_argument("--skip-evaluation", action="store_true")
     parser.add_argument(
