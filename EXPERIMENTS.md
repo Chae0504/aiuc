@@ -7,6 +7,10 @@ mismatch is sufficiently small.
 
 The strict Gurobi reference average daily cost is 939,381.69.
 
+For the causal experiment narrative from `22368` to `22496`, excluding the
+no-allocation baselines `22376` and `22377`, see
+[`STRICT_EXPERIMENT_FLOW.md`](STRICT_EXPERIMENT_FLOW.md).
+
 ### Strict Baselines Without Allocation
 
 | Date | Job ID | Git Commit | Description | Status Acc. | Power MAE | Mismatch MAE (% demand) | Cost Diff. | Notes |
