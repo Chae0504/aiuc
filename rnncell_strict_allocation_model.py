@@ -135,7 +135,12 @@ class StrictRampAwareAllocationUCCell(PhysicsInformedUCCell):
         p_clip = tf.minimum(tf.maximum(p_raw, p_lower), p_upper) * u_final
 
         p_final = self._finalize_power(
-            demand_mw, p_clip, p_lower, p_upper, u_final
+            demand_mw,
+            p_clip,
+            p_lower,
+            p_upper,
+            u_final,
+            cell_inputs=inputs,
         )
 
         hon_new = u_final * (hon_prev + 1.0)
@@ -174,8 +179,17 @@ class StrictRampAwareAllocationUCCell(PhysicsInformedUCCell):
         )
         return u_final, u_masked
 
-    def _finalize_power(self, demand_mw, p_clip, p_lower, p_upper, u_final):
+    def _finalize_power(
+        self,
+        demand_mw,
+        p_clip,
+        p_lower,
+        p_upper,
+        u_final,
+        cell_inputs=None,
+    ):
         """Allocate residual demand over the physically available headroom."""
+        del cell_inputs
         p_upper_online = p_upper * u_final
         p_lower_online = p_lower * u_final
         residual_mw = demand_mw - tf.reduce_sum(p_clip, axis=-1)

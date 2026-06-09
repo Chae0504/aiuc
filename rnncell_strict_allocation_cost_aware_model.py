@@ -21,7 +21,16 @@ class CostAwareLookAheadRepairUCCell(LookAheadCommitmentRepairUCCell):
             raise ValueError("linear_cost_vals must contain one value per generator")
         self.linear_cost = tf.constant(self.linear_cost_vals, dtype=tf.float32)
 
-    def _finalize_power(self, demand_mw, p_clip, p_lower, p_upper, u_final):
+    def _finalize_power(
+        self,
+        demand_mw,
+        p_clip,
+        p_lower,
+        p_upper,
+        u_final,
+        cell_inputs=None,
+    ):
+        del cell_inputs
         economic_power = self._merit_order_dispatch(demand_mw, p_lower, p_upper, u_final)
         return p_clip + tf.stop_gradient(economic_power - p_clip)
 
