@@ -30,6 +30,7 @@ Safety-margin runs from `22454` are recorded separately in
 | 2026-06-03 | 22453 | ba3573f + local changes | Look-ahead commitment repair; Phase 2 balance weight=5 | 71.99% | 18.70 MW | 2.50 MW (0.07%) | +8.68% | 376.09 MW | 2.32% | 0.008 / 2.49 MW | Early stopped at epoch 47; restored best epoch 7. Future-aware shutdown check nearly eliminates shortage, but excess dominates the residual |
 | 2026-06-03 | 22454 | ba3573f + local changes | Look-ahead repair with cost-aware allocation; Phase 2 balance weight=5 | 77.54% | 12.92 MW | 0.016 MW (0.0004%) | +4.40% | 378.04 MW | 0.018% | 0.016 / 0.000002 MW | Early stopped at epoch 59; restored best epoch 19. Strongest strict-data candidate so far; rare tail shortages remain |
 | 2026-06-03 | 22496 | 052b0df | Look-ahead startup repair with cost-aware allocation; Phase 2 balance weight=5 | 76.79% | 12.86 MW | 0.015 MW (0.0004%) | +4.60% | 269.35 MW | 0.019% | 0.015 / 0.000002 MW | Early stopped at epoch 42; restored best epoch 2. Reduces worst-case shortage vs 22454, but cost and over-10MW frequency are slightly worse |
+| 2026-06-10 | 28562 | 3e51f4d | Ramp-position-aware allocation with startup repair and cost-aware dispatch; Phase 2 balance weight=5 | 77.87% | 12.81 MW | 0.001 MW (0.00003%) | +4.25% | 117.57 MW | 0.00083% | 0.00098 / 0.000002 MW | Completed Phase 2 epoch 150; restored best epoch 148. Strongest strict-data result so far: improves average mismatch, tail shortage, power MAE, and cost vs 22496 |
 
 ## Legacy Dataset
 

@@ -1,7 +1,7 @@
 # Strict Experiment Flow
 
 This document summarizes the strict-dataset experiment flow from job `22368`
-to job `22496`, excluding the no-allocation strict baselines `22376` and
+to job `28562`, excluding the no-allocation strict baselines `22376` and
 `22377`.
 
 The main question was: how can the model reduce power-balance mismatch while
@@ -19,6 +19,7 @@ The strict Gurobi reference average daily cost is `939,381.69`.
 | 4 | `22454` | Cost-aware allocation reduced mismatch MAE to `0.016 MW`, power MAE to `12.92 MW`, and cost gap to `+4.40%`. However, one rare max-shortage case remained at `378.04 MW`. | Keep the strong average and cost performance, then identify and reduce rare max-mismatch events. | Cost-aware allocation branch from the look-ahead repair model. | Strongly yes. This became the best cost-aware baseline. | Once balance is mostly fixed, the remaining problem moves from average mismatch to rare ramp/startup tail events. |
 | 5 | `22455`, `22461`, `22468` | The max case in `22454` looked like a possible reserve issue, so safety margins were tested. Margins of `10 MW` and `25 MW` matched `22454`; `50 MW` worsened max mismatch to `394.30 MW`. | Test whether the rare shortage tail was caused by insufficient shutdown headroom. | Look-ahead shutdown safety margin. | No. It did not improve the tail. | The tail was not primarily a shutdown-margin problem. The model needed earlier startup and ramp positioning. |
 | 6 | `22496` | Startup repair reduced the max mismatch from `378.04 MW` to `269.35 MW`, while keeping mismatch MAE at `0.015 MW`. Cost gap slightly worsened from `+4.40%` to `+4.60%`. | Reduce late-startup shortage tails while retaining the cost-aware allocation gains. | Look-ahead startup repair branch from `22454`. | Yes for worst-case shortage, slightly worse for cost and over-10MW frequency. | Startup repair solved the late-startup part of the tail. The remaining max case is now mainly ramp-positioning, not commitment availability. |
+| 7 | `28562` | The `22496` max replay showed that all units were already online, but previous-hour dispatch was too low for the next ramp. | Keep cost-aware dispatch, but pre-position current output so the next hour is reachable under ramp limits. | One-step ramp-position-aware allocation after cost-aware dispatch. | Yes. Mismatch max fell to `117.57 MW`, mismatch MAE fell to `0.001 MW`, and cost gap improved to `+4.25%`. | The remaining tail was mostly a dispatch-positioning issue. Reallocating current output without changing total generation can improve both reliability and cost. |
 
 ## Narrative
 
@@ -95,47 +96,63 @@ critical hour, so late startup was no longer the main issue. The remaining
 shortage came from ramp positioning: some units were online, but their previous
 hour dispatch was too low to ramp enough into the demand spike.
 
+### 7. Ramp-Position Allocation Improved Both Tail and Cost
+
+Job `28562` added one-step ramp-position-aware allocation on top of startup
+repair and cost-aware dispatch. Instead of only meeting demand at hour `t`, it
+reallocated current output so that hour `t+1` was more reachable under ramp
+limits.
+
+This directly targeted the remaining `22496` failure mode. The result was the
+strongest strict-data run so far:
+
+- max mismatch: `269.35 MW` to `117.57 MW`
+- mismatch MAE: `0.015 MW` to `0.001 MW`
+- cost gap: `+4.60%` to `+4.25%`
+- mismatch over 10 MW: `0.019%` to `0.00083%`
+
+The important point is that the method did not simply add reserve by
+over-generating. It moved generation from units that could donate output
+without hurting next-hour reachability to units whose current output improved
+future ramp capability.
+
 ## Current Best Interpretation
 
-For average performance and cost, `22454` is still the strongest baseline:
+Job `28562` is now the strongest strict-data result on the main metrics:
 
-- mismatch MAE: `0.016 MW`
-- cost gap: `+4.40%`
-- power MAE: `12.92 MW`
+- mismatch MAE: `0.001 MW`
+- cost gap: `+4.25%`
+- power MAE: `12.81 MW`
+- max mismatch: `117.57 MW`
 
-For worst-case shortage, `22496` is better:
-
-- max mismatch reduced from `378.04 MW` to `269.35 MW`
-- mismatch MAE stayed essentially unchanged at `0.015 MW`
-- cost gap worsened slightly to `+4.60%`
-
-So the best model depends on the priority:
-
-- choose `22454` if the priority is lowest cost among the strong strict models;
-- choose `22496` if the priority is reducing rare worst-case shortage.
+The earlier trade-off between `22454` and `22496` is no longer the best
+summary. Ramp-position-aware allocation kept the reliability benefit of
+startup repair while also improving cost and average power accuracy.
 
 ## Next Research Direction
 
-The next target should be ramp-position-aware allocation, not another generic
-loss-weight or shutdown-margin tweak.
+The next target should be the remaining `117.57 MW` tail case, not generic
+hyperparameter tuning.
 
-The current failure pattern suggests that the model should not only satisfy
-demand at hour `t`; it should also place generation at hour `t` so that hour
-`t+1` remains reachable under ramp limits.
+The current ramp-position layer only looks one hour ahead and only performs a
+demand-neutral reallocation. That is why the next research question is whether
+the residual tail needs:
 
-A useful next constraint or penalty would be:
+- multi-step ramp positioning, not only `t+1`;
+- a small operating-reserve margin in the ramp-position check;
+- or a targeted repair for the new max-mismatch replay.
+
+The one-step condition currently targeted is:
 
 ```text
 sum_i min(Pmax_i, p_i,t + RU_i) * u_i,t+1 >= D_t+1
 ```
 
-or, as a soft training/evaluation term:
+The next extension would generalize it to:
 
 ```text
-L_ramp_position =
-mean_t ReLU(D_t+1 - sum_i min(Pmax_i, p_i,t + RU_i) * u_i,t+1)^2
+sum_i U_i,t+k(p_t) >= D_t+k,  k = 1, ..., K
 ```
 
-This directly targets the remaining `22496` failure: enough units are committed,
-but previous-hour dispatch is not positioned high enough to meet a steep future
-demand increase.
+with a cost-aware rule for how much current output may be shifted to satisfy
+future ramp reachability.
