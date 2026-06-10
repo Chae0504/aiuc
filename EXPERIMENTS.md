@@ -59,7 +59,8 @@ historical comparison.
    `sbatch run_rnncell_strict_allocation_cost_aware.sh` or
    `sbatch run_rnncell_strict_allocation_cost_aware_margin.sh` or
    `sbatch run_rnncell_strict_allocation_startup_repair.sh` or
-   `sbatch run_rnncell_strict_allocation_ramp_position.sh`.
+   `sbatch run_rnncell_strict_allocation_ramp_position.sh` or
+   `sbatch run_rnncell_strict_allocation_multistep_ramp_position.sh`.
 3. Inspect `outputs/rnncell_strict_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_repair_<job_id>/evaluation.json` or
@@ -67,6 +68,7 @@ historical comparison.
    `outputs/rnncell_strict_allocation_cost_aware_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_cost_aware_margin_<margin>_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_startup_repair_<job_id>/evaluation.json` or
-   `outputs/rnncell_strict_allocation_ramp_position_<job_id>/evaluation.json`.
+   `outputs/rnncell_strict_allocation_ramp_position_<job_id>/evaluation.json` or
+   `outputs/rnncell_strict_allocation_multistep_ramp_position_<job_id>/evaluation.json`.
 4. Generate a summary row with `python summarize_experiment.py <output_dir>`.
 5. Add the row above with a short description and commit the updated log.
