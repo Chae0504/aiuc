@@ -293,6 +293,19 @@ def build_hybrid_uc_strict_allocation_model(
         num_gens,
         demand_normalizer_mw=demand_normalizer_mw,
         balance_loss_weight=balance_loss_weight,
+        noload_cost_vals=specs["noload_cost"],
+        startup_cost_vals=specs["startup_cost"],
+        initial_status_vals=specs["init_status"],
+        cost_normalizer=(
+            float(
+                (
+                    specs["p_max"] * specs["linear_cost"]
+                    + specs["noload_cost"]
+                ).sum()
+                * num_hours
+                + specs["startup_cost"].sum()
+            )
+        ),
         name="mismatch_loss_layer",
     )([input_dynamic, rnn_outputs])
     out_status = Activation("linear", name="out_status")(status_raw)

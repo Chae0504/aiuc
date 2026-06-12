@@ -54,5 +54,8 @@ python -u AIUC/train_rnncell_strict_allocation_multistep_ramp_position.py \
   --phase2-learning-rate 3e-5 \
   --reduce-lr-patience 8 \
   --reduce-lr-factor 0.5 \
-  --phase2-balance-loss-weight 5 \
+  --phase2-status-loss-weight 0.5 \
+  --phase2-power-loss-weight 1 \
+  --phase2-balance-loss-weight 0 \
+  --phase2-cost-loss-weight 0.05 \
   --verbose 2

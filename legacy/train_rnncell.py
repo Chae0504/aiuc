@@ -40,9 +40,11 @@ def parse_args():
     parser.add_argument("--phase1-status-loss-weight", type=float, default=1.0)
     parser.add_argument("--phase1-power-loss-weight", type=float, default=0.0)
     parser.add_argument("--phase1-balance-loss-weight", type=float, default=0.25)
+    parser.add_argument("--phase1-cost-loss-weight", type=float, default=0.0)
     parser.add_argument("--phase2-status-loss-weight", type=float, default=1.0)
     parser.add_argument("--phase2-power-loss-weight", type=float, default=1.0)
     parser.add_argument("--phase2-balance-loss-weight", type=float, default=2.0)
+    parser.add_argument("--phase2-cost-loss-weight", type=float, default=0.0)
     parser.add_argument("--reduce-lr-patience", type=int, default=8)
     parser.add_argument("--reduce-lr-factor", type=float, default=0.5)
     parser.add_argument("--min-learning-rate", type=float, default=1e-6)
@@ -250,13 +252,15 @@ def print_loss_configuration(
     status_loss_weight,
     power_loss_weight,
     balance_loss_weight,
+    cost_loss_weight,
     power_normalizer_mw,
     demand_normalizer_mw,
 ):
     print(
         f"{phase} loss = {status_loss_weight:g} * status_BCE"
         f" + {power_loss_weight:g} * (power_MAE_MW / {power_normalizer_mw:.2f})"
-        f" + {balance_loss_weight:g} * (mismatch_MAE_MW / {demand_normalizer_mw:.2f})",
+        f" + {balance_loss_weight:g} * (mismatch_MAE_MW / {demand_normalizer_mw:.2f})"
+        f" + {cost_loss_weight:g} * normalized_commitment_cost_proxy",
         flush=True,
     )
 
@@ -275,11 +279,14 @@ def train_two_phases(
     mismatch_layer = model.get_layer("mismatch_loss_layer")
     print("\n=== Phase 1: status-focused training ===", flush=True)
     mismatch_layer.set_balance_loss_weight(args.phase1_balance_loss_weight)
+    if hasattr(mismatch_layer, "set_cost_loss_weight"):
+        mismatch_layer.set_cost_loss_weight(args.phase1_cost_loss_weight)
     print_loss_configuration(
         "Phase 1",
         args.phase1_status_loss_weight,
         args.phase1_power_loss_weight,
         args.phase1_balance_loss_weight,
+        args.phase1_cost_loss_weight,
         power_normalizer_mw,
         demand_normalizer_mw,
     )
@@ -312,11 +319,14 @@ def train_two_phases(
 
     print("\n=== Phase 2: hybrid fine-tuning ===", flush=True)
     mismatch_layer.set_balance_loss_weight(args.phase2_balance_loss_weight)
+    if hasattr(mismatch_layer, "set_cost_loss_weight"):
+        mismatch_layer.set_cost_loss_weight(args.phase2_cost_loss_weight)
     print_loss_configuration(
         "Phase 2",
         args.phase2_status_loss_weight,
         args.phase2_power_loss_weight,
         args.phase2_balance_loss_weight,
+        args.phase2_cost_loss_weight,
         power_normalizer_mw,
         demand_normalizer_mw,
     )

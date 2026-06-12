@@ -4,6 +4,7 @@
 import csv
 import inspect
 import json
+import time
 
 import numpy as np
 
@@ -71,7 +72,9 @@ def make_strict_model_inputs(demand, specs, static_features):
 
 
 def evaluate_strict(model, test_inputs, demand, true_status, true_power, specs, verbose):
+    predict_start = time.perf_counter()
     pred_status, pred_power = model.predict(test_inputs, verbose=verbose)
+    prediction_seconds = time.perf_counter() - predict_start
     pred_status_bin = (pred_status > 0.5).astype(np.float32)
     num_samples = len(pred_status_bin)
     mean_demand = float(np.mean(demand))
@@ -120,6 +123,10 @@ def evaluate_strict(model, test_inputs, demand, true_status, true_power, specs, 
     return {
         "status_accuracy_percent": float(np.mean(pred_status_bin == true_status) * 100),
         "power_mae_mw": float(np.mean(np.abs(pred_power - true_power))),
+        "prediction_wall_time_seconds": float(prediction_seconds),
+        "prediction_ms_per_sample": float(prediction_seconds / num_samples * 1000),
+        "prediction_samples_per_second": float(num_samples / prediction_seconds),
+        "prediction_num_samples": int(num_samples),
         "mismatch_mae_mw": mismatch,
         "mismatch_percent_of_mean_demand": mismatch / mean_demand * 100,
         "mismatch_max_mw": float(np.max(absolute_mismatch)),

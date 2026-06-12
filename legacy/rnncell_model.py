@@ -225,14 +225,43 @@ class OnlyMismatchLoss(Layer):
         num_gens,
         demand_normalizer_mw=1.0,
         balance_loss_weight=1.0,
+        noload_cost_vals=None,
+        startup_cost_vals=None,
+        initial_status_vals=None,
+        cost_normalizer=1.0,
+        cost_loss_weight=0.0,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.num_gens = num_gens
         self.demand_normalizer_mw = float(demand_normalizer_mw)
         self.balance_loss_weight = float(balance_loss_weight)
+        self.noload_cost_vals = (
+            None if noload_cost_vals is None else list(noload_cost_vals)
+        )
+        self.startup_cost_vals = (
+            None if startup_cost_vals is None else list(startup_cost_vals)
+        )
+        self.initial_status_vals = (
+            None if initial_status_vals is None else list(initial_status_vals)
+        )
+        self.cost_normalizer = float(cost_normalizer)
+        self.cost_loss_weight = float(cost_loss_weight)
         if self.demand_normalizer_mw <= 0:
             raise ValueError("demand_normalizer_mw must be positive")
+        if self.cost_normalizer <= 0:
+            raise ValueError("cost_normalizer must be positive")
+        self.has_cost_proxy = (
+            self.noload_cost_vals is not None
+            and self.startup_cost_vals is not None
+            and self.initial_status_vals is not None
+        )
+        if self.has_cost_proxy:
+            self.noload_cost = tf.constant(self.noload_cost_vals, dtype=tf.float32)
+            self.startup_cost = tf.constant(self.startup_cost_vals, dtype=tf.float32)
+            self.initial_status = tf.constant(
+                self.initial_status_vals, dtype=tf.float32
+            )
 
     def call(self, inputs):
         demand_mw, rnn_outputs = inputs
@@ -243,10 +272,33 @@ class OnlyMismatchLoss(Layer):
         mismatch_mae_mw = tf.reduce_mean(tf.abs(pred_total - demand_mw))
         normalized_mismatch = mismatch_mae_mw / self.demand_normalizer_mw
         self.add_loss(self.balance_loss_weight * normalized_mismatch)
+        if self.has_cost_proxy and self.cost_loss_weight:
+            status_proxy = tf.clip_by_value(out_status, 0.0, 1.0)
+            initial_status = tf.tile(
+                self.initial_status[tf.newaxis, tf.newaxis, :],
+                [tf.shape(status_proxy)[0], 1, 1],
+            )
+            previous_status = tf.concat(
+                [initial_status, status_proxy[:, :-1, :]], axis=1
+            )
+            startup_proxy = tf.nn.relu(status_proxy - previous_status)
+            noload_cost = tf.reduce_sum(
+                status_proxy * self.noload_cost, axis=(1, 2)
+            )
+            startup_cost = tf.reduce_sum(
+                startup_proxy * self.startup_cost, axis=(1, 2)
+            )
+            normalized_cost = tf.reduce_mean(
+                noload_cost + startup_cost
+            ) / self.cost_normalizer
+            self.add_loss(self.cost_loss_weight * normalized_cost)
         return out_status, out_power_mw
 
     def set_balance_loss_weight(self, value):
         self.balance_loss_weight = float(value)
+
+    def set_cost_loss_weight(self, value):
+        self.cost_loss_weight = float(value)
 
     def get_config(self):
         return {
@@ -254,6 +306,11 @@ class OnlyMismatchLoss(Layer):
             "num_gens": self.num_gens,
             "demand_normalizer_mw": self.demand_normalizer_mw,
             "balance_loss_weight": self.balance_loss_weight,
+            "noload_cost_vals": self.noload_cost_vals,
+            "startup_cost_vals": self.startup_cost_vals,
+            "initial_status_vals": self.initial_status_vals,
+            "cost_normalizer": self.cost_normalizer,
+            "cost_loss_weight": self.cost_loss_weight,
         }
 
 
