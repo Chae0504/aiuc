@@ -1,0 +1,51 @@
+# Strict Model Summary
+
+This file keeps the strict-data model branches readable. `30714` is the
+current physical-feasibility baseline.
+
+## Main Branches
+
+| Short Name | Script | Train File | Main Idea | Representative Job | Role |
+| --- | --- | --- | --- | --- | --- |
+| `strict_clip` | `baselines/strict_clipping/run_rnncell_strict.sh` | `baselines/strict_clipping/train_rnncell_strict.py` | Strict lower/upper clipping without allocation | `22376`, `22377` | Negative baseline; physical clipping alone leaves large mismatch |
+| `strict_alloc` | `run_rnncell_strict_allocation.sh` | `train_rnncell_strict_allocation.py` | Proportional allocation after strict RNN cell | `22368` | First useful allocation baseline |
+| `repair` | `run_rnncell_strict_allocation_repair.sh` | `train_rnncell_strict_allocation_repair.py` | MUT/MDT-aware commitment repair | `22441` | Large average mismatch reduction, but high tail/cost |
+| `lookahead` | `run_rnncell_strict_allocation_lookahead_repair.sh` | `train_rnncell_strict_allocation_lookahead_repair.py` | Future-aware shutdown repair | `22453` | Reduces shortage risk but can create excess/cost |
+| `cost_aware` | `run_rnncell_strict_allocation_cost_aware.sh` | `train_rnncell_strict_allocation_cost_aware.py` | Cost-aware allocation with look-ahead repair | `22454` | Best early economic/average-mismatch model |
+| `startup` | `run_rnncell_strict_allocation_startup_repair.sh` | `train_rnncell_strict_allocation_startup_repair.py` | Look-ahead startup repair | `22496` | Reduces late-startup tail cases |
+| `ramp_pos` | `run_rnncell_strict_allocation_ramp_position.sh` | `train_rnncell_strict_allocation_ramp_position.py` | One-step ramp-position-aware allocation | `28562` | Better tail and cost than startup branch, but one rare shortage remains |
+| `multiramp` | `run_rnncell_strict_allocation_multistep_ramp_position.sh` | `train_rnncell_strict_allocation_multistep_ramp_position.py` | Multi-step ramp-position-aware allocation | `30714` | Current physical-feasibility baseline |
+| `strict_econ` | `run_rnncell_strict_econ.sh` | `train_rnncell_strict_econ.py` | Same architecture as `multiramp`, but Phase 2 optimizes a cost proxy | pending | Next branch for economic optimality |
+
+## Current Baseline
+
+Use `multiramp` / job `30714` as the strict physical-feasibility baseline:
+
+- mismatch MAE: `0.000004 MW`
+- mismatch max: `0.0005 MW`
+- mismatch over 10 MW: `0.00%`
+- evaluated hard violations: zero
+- cost gap: `+4.31%`
+
+This means the next meaningful target is not additional balance repair. The
+next target is cheaper, more Gurobi-like feasible schedules.
+
+## Next Branch: `strict_econ`
+
+`strict_econ` keeps the `30714` architecture and changes only the Phase 2
+training objective:
+
+- status BCE weight: `0.5`
+- power MAE weight: `1`
+- balance mismatch weight: `0`
+- commitment cost proxy weight: `0.05`
+
+The purpose is to stop spending Phase 2 effort on a balance loss that is already
+solved by the deterministic allocation/repair layers, and instead push the
+neural commitment pattern toward cheaper no-load/startup behavior.
+
+Run it with:
+
+```bash
+sbatch run_rnncell_strict_econ.sh
+```

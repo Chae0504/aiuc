@@ -11,6 +11,9 @@ For the causal experiment narrative from `22368` to `22496`, excluding the
 no-allocation baselines `22376` and `22377`, see
 [`STRICT_EXPERIMENT_FLOW.md`](STRICT_EXPERIMENT_FLOW.md).
 
+For a compact map of the active model branches, see
+[`STRICT_MODEL_SUMMARY.md`](STRICT_MODEL_SUMMARY.md).
+
 ### Strict Baselines Without Allocation
 
 | Date | Job ID | Git Commit | Description | Status Acc. | Power MAE | Mismatch MAE (% demand) | Cost Diff. | Notes |
@@ -61,7 +64,8 @@ historical comparison.
    `sbatch run_rnncell_strict_allocation_cost_aware_margin.sh` or
    `sbatch run_rnncell_strict_allocation_startup_repair.sh` or
    `sbatch run_rnncell_strict_allocation_ramp_position.sh` or
-   `sbatch run_rnncell_strict_allocation_multistep_ramp_position.sh`.
+   `sbatch run_rnncell_strict_allocation_multistep_ramp_position.sh` or
+   `sbatch run_rnncell_strict_econ.sh`.
 3. Inspect `outputs/rnncell_strict_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_repair_<job_id>/evaluation.json` or
@@ -70,6 +74,7 @@ historical comparison.
    `outputs/rnncell_strict_allocation_cost_aware_margin_<margin>_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_startup_repair_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_ramp_position_<job_id>/evaluation.json` or
-   `outputs/rnncell_strict_allocation_multistep_ramp_position_<job_id>/evaluation.json`.
+   `outputs/rnncell_strict_allocation_multistep_ramp_position_<job_id>/evaluation.json` or
+   `outputs/rnncell_strict_econ_<job_id>/evaluation.json`.
 4. Generate a summary row with `python summarize_experiment.py <output_dir>`.
 5. Add the row above with a short description and commit the updated log.
