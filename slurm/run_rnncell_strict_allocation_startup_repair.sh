@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J rnncell_strict_costaware
+#SBATCH -J rnncell_strict_startup
 #SBATCH -p g1
 #SBATCH --nodelist=ego-g01
 #SBATCH -N 1
@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:rtx_4090:1
-#SBATCH -o rnncell_strict_allocation_cost_aware_%j.out
+#SBATCH -o /home/yoonjoo_chae/AIUC/logs/slurm/rnncell_strict_allocation_startup_repair_%j.out
 
 set -euo pipefail
 
@@ -20,7 +20,7 @@ cd /home/yoonjoo_chae
 
 export PYTHONUNBUFFERED=1
 
-OUTPUT_DIR="AIUC/outputs/rnncell_strict_allocation_cost_aware_${SLURM_JOB_ID}"
+OUTPUT_DIR="AIUC/outputs/rnncell_strict_allocation_startup_repair_${SLURM_JOB_ID}"
 DATA_PATH="AIUC/DG/uc_new_data_strict.npz"
 SPECS_PATH="AIUC/DG/generator_specs.csv"
 
@@ -45,7 +45,7 @@ with np.load(path) as data:
 print(f"Strict UC dataset preflight passed: {path}")
 PY
 
-python -u AIUC/train_rnncell_strict_allocation_cost_aware.py \
+python -u AIUC/train_rnncell_strict_allocation_startup_repair.py \
   --data "$DATA_PATH" \
   --specs "$SPECS_PATH" \
   --output-dir "$OUTPUT_DIR" \

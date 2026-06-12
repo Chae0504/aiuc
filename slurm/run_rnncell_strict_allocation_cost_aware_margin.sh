@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J rnncell_strict_lookahead
+#SBATCH -J rnncell_strict_margin
 #SBATCH -p g1
 #SBATCH --nodelist=ego-g01
 #SBATCH -N 1
@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:rtx_4090:1
-#SBATCH -o rnncell_strict_allocation_lookahead_repair_%j.out
+#SBATCH -o /home/yoonjoo_chae/AIUC/logs/slurm/rnncell_strict_allocation_cost_aware_margin_%j.out
 
 set -euo pipefail
 
@@ -20,7 +20,8 @@ cd /home/yoonjoo_chae
 
 export PYTHONUNBUFFERED=1
 
-OUTPUT_DIR="AIUC/outputs/rnncell_strict_allocation_lookahead_repair_${SLURM_JOB_ID}"
+LOOKAHEAD_SAFETY_MARGIN_MW="${LOOKAHEAD_SAFETY_MARGIN_MW:-25}"
+OUTPUT_DIR="AIUC/outputs/rnncell_strict_allocation_cost_aware_margin_${LOOKAHEAD_SAFETY_MARGIN_MW}_${SLURM_JOB_ID}"
 DATA_PATH="AIUC/DG/uc_new_data_strict.npz"
 SPECS_PATH="AIUC/DG/generator_specs.csv"
 
@@ -45,10 +46,13 @@ with np.load(path) as data:
 print(f"Strict UC dataset preflight passed: {path}")
 PY
 
-python -u AIUC/train_rnncell_strict_allocation_lookahead_repair.py \
+echo "Look-ahead safety margin: ${LOOKAHEAD_SAFETY_MARGIN_MW} MW"
+
+python -u AIUC/train_rnncell_strict_allocation_cost_aware_margin.py \
   --data "$DATA_PATH" \
   --specs "$SPECS_PATH" \
   --output-dir "$OUTPUT_DIR" \
+  --lookahead-safety-margin-mw "$LOOKAHEAD_SAFETY_MARGIN_MW" \
   --phase2-epochs 150 \
   --phase2-patience 40 \
   --phase2-learning-rate 3e-5 \

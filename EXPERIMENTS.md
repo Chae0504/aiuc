@@ -57,15 +57,15 @@ historical comparison.
 1. Commit code changes before submitting an experiment.
 2. Submit a strict experiment with
    `sbatch baselines/strict_clipping/run_rnncell_strict.sh` or
-   `sbatch run_rnncell_strict_allocation.sh` or
-   `sbatch run_rnncell_strict_allocation_repair.sh` or
-   `sbatch run_rnncell_strict_allocation_lookahead_repair.sh` or
-   `sbatch run_rnncell_strict_allocation_cost_aware.sh` or
-   `sbatch run_rnncell_strict_allocation_cost_aware_margin.sh` or
-   `sbatch run_rnncell_strict_allocation_startup_repair.sh` or
-   `sbatch run_rnncell_strict_allocation_ramp_position.sh` or
-   `sbatch run_rnncell_strict_allocation_multistep_ramp_position.sh` or
-   `sbatch run_rnncell_strict_econ.sh`.
+   `sbatch slurm/run_rnncell_strict_allocation.sh` or
+   `sbatch slurm/run_rnncell_strict_allocation_repair.sh` or
+   `sbatch slurm/run_rnncell_strict_allocation_lookahead_repair.sh` or
+   `sbatch slurm/run_rnncell_strict_allocation_cost_aware.sh` or
+   `sbatch slurm/run_rnncell_strict_allocation_cost_aware_margin.sh` or
+   `sbatch slurm/run_rnncell_strict_allocation_startup_repair.sh` or
+   `sbatch slurm/run_rnncell_strict_allocation_ramp_position.sh` or
+   `sbatch slurm/run_rnncell_strict_allocation_multistep_ramp_position.sh` or
+   `sbatch slurm/run_rnncell_strict_econ.sh`.
 3. Inspect `outputs/rnncell_strict_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_repair_<job_id>/evaluation.json` or

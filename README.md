@@ -4,6 +4,9 @@ Physics-informed recurrent neural network experiments for unit commitment.
 
 ## SLURM Training
 
+Strict-data Slurm runners live in `slurm/`. They write raw `.out` logs to
+`logs/slurm/` and training artifacts to `outputs/`.
+
 Legacy RNN-cell workflows are retained under `legacy/` for historical
 comparison. Submit the original modular RNN-cell training job with:
 
@@ -131,7 +134,7 @@ After `DG/uc_new_data_strict.npz` has been generated and validated, train the
 separate strict allocation model:
 
 ```bash
-sbatch run_rnncell_strict_allocation.sh
+sbatch slurm/run_rnncell_strict_allocation.sh
 ```
 
 Use this runner for new strict-data experiments. The older
@@ -161,7 +164,7 @@ through transitions allowed by minimum-time, shutdown-cap, and terminal
 constraints:
 
 ```bash
-sbatch run_rnncell_strict_allocation_repair.sh
+sbatch slurm/run_rnncell_strict_allocation_repair.sh
 ```
 
 The repair first keeps or starts eligible generators until online upper bounds
@@ -183,7 +186,7 @@ outputs/rnncell_strict_allocation_repair_<job_id>/
 To compare the hourly repair baseline with a future-aware shutdown rule, submit:
 
 ```bash
-sbatch run_rnncell_strict_allocation_lookahead_repair.sh
+sbatch slurm/run_rnncell_strict_allocation_lookahead_repair.sh
 ```
 
 This separate variant exposes the next `max(MDT)=15` demand values to the hard
@@ -208,7 +211,7 @@ To keep the look-ahead commitment repair while dispatching online units in
 economic merit order, submit:
 
 ```bash
-sbatch run_rnncell_strict_allocation_cost_aware.sh
+sbatch slurm/run_rnncell_strict_allocation_cost_aware.sh
 ```
 
 This branch preserves the repaired commitment and replaces proportional
@@ -227,13 +230,13 @@ outputs/rnncell_strict_allocation_cost_aware_<job_id>/
 To test a reserve buffer in the look-ahead shutdown check, submit:
 
 ```bash
-sbatch run_rnncell_strict_allocation_cost_aware_margin.sh
+sbatch slurm/run_rnncell_strict_allocation_cost_aware_margin.sh
 ```
 
 The default margin is `25 MW`. Override it per submission with:
 
 ```bash
-LOOKAHEAD_SAFETY_MARGIN_MW=10 sbatch run_rnncell_strict_allocation_cost_aware_margin.sh
+LOOKAHEAD_SAFETY_MARGIN_MW=10 sbatch slurm/run_rnncell_strict_allocation_cost_aware_margin.sh
 ```
 
 The margin changes the look-ahead feasibility test from `capacity >= demand`
@@ -244,7 +247,7 @@ To instead start eligible offline units early when future ramp-aware capacity
 is short, submit:
 
 ```bash
-sbatch run_rnncell_strict_allocation_startup_repair.sh
+sbatch slurm/run_rnncell_strict_allocation_startup_repair.sh
 ```
 
 This branch keeps the cost-aware allocation from `22454`, but adds a proactive
