@@ -15,7 +15,7 @@ current physical-feasibility baseline.
 | `startup` | `slurm/run_rnncell_strict_allocation_startup_repair.sh` | `train_rnncell_strict_allocation_startup_repair.py` | Look-ahead startup repair | `22496` | Reduces late-startup tail cases |
 | `ramp_pos` | `slurm/run_rnncell_strict_allocation_ramp_position.sh` | `train_rnncell_strict_allocation_ramp_position.py` | One-step ramp-position-aware allocation | `28562` | Better tail and cost than startup branch, but one rare shortage remains |
 | `multiramp` | `slurm/run_rnncell_strict_allocation_multistep_ramp_position.sh` | `train_rnncell_strict_allocation_multistep_ramp_position.py` | Multi-step ramp-position-aware allocation | `30714` | Current physical-feasibility baseline |
-| `strict_econ` | `slurm/run_rnncell_strict_econ.sh` | `train_rnncell_strict_econ.py` | Same architecture as `multiramp`, but Phase 2 optimizes a cost proxy | pending | Next branch for economic optimality |
+| `strict_econ` | `slurm/run_rnncell_strict_econ.sh` | `train_rnncell_strict_econ.py` | Same architecture as `multiramp`, but Phase 2 optimizes a commitment cost proxy | `33220` | First economic-loss test; feasibility preserved but cost did not improve |
 
 ## Current Baseline
 
@@ -30,7 +30,7 @@ Use `multiramp` / job `30714` as the strict physical-feasibility baseline:
 This means the next meaningful target is not additional balance repair. The
 next target is cheaper, more Gurobi-like feasible schedules.
 
-## Next Branch: `strict_econ`
+## Economic-Loss Result: `strict_econ`
 
 `strict_econ` keeps the `30714` architecture and changes only the Phase 2
 training objective:
@@ -44,8 +44,17 @@ The purpose is to stop spending Phase 2 effort on a balance loss that is already
 solved by the deterministic allocation/repair layers, and instead push the
 neural commitment pattern toward cheaper no-load/startup behavior.
 
-Run it with:
+Job `33220` showed that this first weighting was too weak to achieve that
+purpose:
 
-```bash
-sbatch slurm/run_rnncell_strict_econ.sh
-```
+- cost gap: `+4.31%` to `+4.39%`
+- status accuracy: `78.10%` to `77.79%`
+- power MAE: `12.92 MW` to `12.88 MW`
+- physical violations and balance: unchanged at numerical tolerance
+- online generator-hours: `+4.38` per day versus `30714`
+- startups: `+0.252` per day versus `30714`
+
+The normalized cost term contributed only about `0.0004` to the total loss at
+weight `0.05`, while halving the status BCE weight had a much larger effect.
+Therefore `30714` remains the baseline and `33220` is retained as a negative
+weighting result.
