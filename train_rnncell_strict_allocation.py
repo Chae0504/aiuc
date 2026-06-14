@@ -167,6 +167,25 @@ def train_and_evaluate(
     import tensorflow as tf
     set_deterministic_seed(tf, args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    visible_gpus = tf.config.list_physical_devices("GPU")
+    if args.expected_gpus is not None and len(visible_gpus) != args.expected_gpus:
+        raise RuntimeError(
+            f"Expected {args.expected_gpus} visible GPUs, "
+            f"but TensorFlow found {len(visible_gpus)}"
+        )
+    if args.distribution_strategy == "mirrored":
+        if len(visible_gpus) < 2:
+            raise RuntimeError("MirroredStrategy requires at least two visible GPUs")
+        strategy = tf.distribute.MirroredStrategy()
+    else:
+        strategy = tf.distribute.get_strategy()
+    print(
+        f"Distribution strategy: {type(strategy).__name__}; "
+        f"visible GPUs={len(visible_gpus)}; "
+        f"replicas={strategy.num_replicas_in_sync}; "
+        f"global batch size={args.batch_size}",
+        flush=True,
+    )
 
     specs = load_strict_specs(args.specs)
     demand, status, power = load_dataset(args.data, args.limit_samples)
@@ -201,13 +220,14 @@ def train_and_evaluate(
     if "lookahead_safety_margin_mw" in inspect.signature(build_model).parameters:
         model_kwargs["lookahead_safety_margin_mw"] = args.lookahead_safety_margin_mw
 
-    model = build_model(
-        specs,
-        demand_normalizer_mw=demand_normalizer_mw,
-        balance_loss_weight=args.phase1_balance_loss_weight,
-        num_hours=demand.shape[1],
-        **model_kwargs,
-    )
+    with strategy.scope():
+        model = build_model(
+            specs,
+            demand_normalizer_mw=demand_normalizer_mw,
+            balance_loss_weight=args.phase1_balance_loss_weight,
+            num_hours=demand.shape[1],
+            **model_kwargs,
+        )
     model.summary()
     phase1_history, phase2_history = train_two_phases(
         tf,
@@ -219,6 +239,7 @@ def train_and_evaluate(
         power_normalizer_mw,
         demand_normalizer_mw,
         args,
+        strategy=strategy,
     )
     model.save(args.output_dir / saved_model_name)
     save_json(
@@ -236,6 +257,11 @@ def train_and_evaluate(
             "model_variant": model_variant,
             "power_normalizer_mw": power_normalizer_mw,
             "demand_normalizer_mw": demand_normalizer_mw,
+            "visible_gpu_count": len(visible_gpus),
+            "num_replicas_in_sync": strategy.num_replicas_in_sync,
+            "per_replica_batch_size": (
+                args.batch_size / strategy.num_replicas_in_sync
+            ),
         },
     )
 

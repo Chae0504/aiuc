@@ -70,3 +70,9 @@ COST_PROXY_WEIGHT=10 sbatch slurm/run_rnncell_strict_econ.sh
 
 Each Phase 1/2 CSV records both `normalized_commitment_cost_proxy` and
 `weighted_commitment_cost_proxy`.
+
+For two GPUs on `ego-g01`:
+
+```bash
+COST_PROXY_WEIGHT=5 sbatch slurm/run_rnncell_strict_econ_2gpu.sh
+```

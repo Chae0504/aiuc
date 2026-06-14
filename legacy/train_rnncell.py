@@ -2,6 +2,7 @@
 """Train and evaluate the physics-informed UC RNN from uc_118_RNNcell.ipynb."""
 
 import argparse
+import contextlib
 import csv
 import json
 import os
@@ -31,6 +32,18 @@ def parse_args():
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument(
+        "--distribution-strategy",
+        choices=["none", "mirrored"],
+        default="none",
+        help="TensorFlow distribution strategy. Use mirrored for one-process multi-GPU.",
+    )
+    parser.add_argument(
+        "--expected-gpus",
+        type=int,
+        default=None,
+        help="Fail early unless TensorFlow sees exactly this many GPUs.",
+    )
     parser.add_argument("--phase1-epochs", type=int, default=30)
     parser.add_argument("--phase2-epochs", type=int, default=150)
     parser.add_argument("--phase1-patience", type=int, default=10)
@@ -275,7 +288,11 @@ def train_two_phases(
     power_normalizer_mw,
     demand_normalizer_mw,
     args,
+    strategy=None,
 ):
+    def strategy_scope():
+        return strategy.scope() if strategy is not None else contextlib.nullcontext()
+
     mismatch_layer = model.get_layer("mismatch_loss_layer")
     print("\n=== Phase 1: status-focused training ===", flush=True)
     mismatch_layer.set_balance_loss_weight(args.phase1_balance_loss_weight)
@@ -290,15 +307,16 @@ def train_two_phases(
         power_normalizer_mw,
         demand_normalizer_mw,
     )
-    compile_model(
-        tf,
-        model,
-        power_normalizer_mw=power_normalizer_mw,
-        demand_normalizer_mw=demand_normalizer_mw,
-        learning_rate=args.phase1_learning_rate,
-        status_loss_weight=args.phase1_status_loss_weight,
-        power_loss_weight=args.phase1_power_loss_weight,
-    )
+    with strategy_scope():
+        compile_model(
+            tf,
+            model,
+            power_normalizer_mw=power_normalizer_mw,
+            demand_normalizer_mw=demand_normalizer_mw,
+            learning_rate=args.phase1_learning_rate,
+            status_loss_weight=args.phase1_status_loss_weight,
+            power_loss_weight=args.phase1_power_loss_weight,
+        )
     history_phase1 = model.fit(
         x=train_inputs,
         y=train_targets,
@@ -330,15 +348,16 @@ def train_two_phases(
         power_normalizer_mw,
         demand_normalizer_mw,
     )
-    compile_model(
-        tf,
-        model,
-        power_normalizer_mw=power_normalizer_mw,
-        demand_normalizer_mw=demand_normalizer_mw,
-        learning_rate=args.phase2_learning_rate,
-        status_loss_weight=args.phase2_status_loss_weight,
-        power_loss_weight=args.phase2_power_loss_weight,
-    )
+    with strategy_scope():
+        compile_model(
+            tf,
+            model,
+            power_normalizer_mw=power_normalizer_mw,
+            demand_normalizer_mw=demand_normalizer_mw,
+            learning_rate=args.phase2_learning_rate,
+            status_loss_weight=args.phase2_status_loss_weight,
+            power_loss_weight=args.phase2_power_loss_weight,
+        )
     history_phase2 = model.fit(
         x=train_inputs,
         y=train_targets,
