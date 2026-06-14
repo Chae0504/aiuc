@@ -35,10 +35,10 @@ next target is cheaper, more Gurobi-like feasible schedules.
 `strict_econ` keeps the `30714` architecture and changes only the Phase 2
 training objective:
 
-- status BCE weight: `0.5`
+- status BCE weight: `1`
 - power MAE weight: `1`
 - balance mismatch weight: `0`
-- commitment cost proxy weight: `0.05`
+- commitment cost proxy weight: controlled by `COST_PROXY_WEIGHT`
 
 The purpose is to stop spending Phase 2 effort on a balance loss that is already
 solved by the deterministic allocation/repair layers, and instead push the
@@ -58,3 +58,15 @@ The normalized cost term contributed only about `0.0004` to the total loss at
 weight `0.05`, while halving the status BCE weight had a much larger effect.
 Therefore `30714` remains the baseline and `33220` is retained as a negative
 weighting result.
+
+New controlled runs keep BCE and power weights fixed and vary only the proxy
+scale. The default proxy weight is `5.0`:
+
+```bash
+sbatch slurm/run_rnncell_strict_econ.sh
+COST_PROXY_WEIGHT=1 sbatch slurm/run_rnncell_strict_econ.sh
+COST_PROXY_WEIGHT=10 sbatch slurm/run_rnncell_strict_econ.sh
+```
+
+Each Phase 1/2 CSV records both `normalized_commitment_cost_proxy` and
+`weighted_commitment_cost_proxy`.

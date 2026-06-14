@@ -76,6 +76,6 @@ historical comparison.
    `outputs/rnncell_strict_allocation_startup_repair_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_ramp_position_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_multistep_ramp_position_<job_id>/evaluation.json` or
-   `outputs/rnncell_strict_econ_<job_id>/evaluation.json`.
+   `outputs/rnncell_strict_econ_costw<weight>_<job_id>/evaluation.json`.
 4. Generate a summary row with `python summarize_experiment.py <output_dir>`.
 5. Add the row above with a short description and commit the updated log.

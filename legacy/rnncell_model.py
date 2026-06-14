@@ -262,6 +262,12 @@ class OnlyMismatchLoss(Layer):
             self.initial_status = tf.constant(
                 self.initial_status_vals, dtype=tf.float32
             )
+            self.cost_proxy_tracker = tf.keras.metrics.Mean(
+                name="normalized_commitment_cost_proxy"
+            )
+            self.weighted_cost_proxy_tracker = tf.keras.metrics.Mean(
+                name="weighted_commitment_cost_proxy"
+            )
 
     def call(self, inputs):
         demand_mw, rnn_outputs = inputs
@@ -272,7 +278,7 @@ class OnlyMismatchLoss(Layer):
         mismatch_mae_mw = tf.reduce_mean(tf.abs(pred_total - demand_mw))
         normalized_mismatch = mismatch_mae_mw / self.demand_normalizer_mw
         self.add_loss(self.balance_loss_weight * normalized_mismatch)
-        if self.has_cost_proxy and self.cost_loss_weight:
+        if self.has_cost_proxy:
             status_proxy = tf.clip_by_value(out_status, 0.0, 1.0)
             initial_status = tf.tile(
                 self.initial_status[tf.newaxis, tf.newaxis, :],
@@ -291,8 +297,18 @@ class OnlyMismatchLoss(Layer):
             normalized_cost = tf.reduce_mean(
                 noload_cost + startup_cost
             ) / self.cost_normalizer
-            self.add_loss(self.cost_loss_weight * normalized_cost)
+            weighted_cost = self.cost_loss_weight * normalized_cost
+            self.cost_proxy_tracker.update_state(normalized_cost)
+            self.weighted_cost_proxy_tracker.update_state(weighted_cost)
+            if self.cost_loss_weight:
+                self.add_loss(weighted_cost)
         return out_status, out_power_mw
+
+    @property
+    def metrics(self):
+        if not self.has_cost_proxy:
+            return []
+        return [self.cost_proxy_tracker, self.weighted_cost_proxy_tracker]
 
     def set_balance_loss_weight(self, value):
         self.balance_loss_weight = float(value)

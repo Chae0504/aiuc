@@ -20,9 +20,20 @@ cd /home/yoonjoo_chae
 
 export PYTHONUNBUFFERED=1
 
-OUTPUT_DIR="AIUC/outputs/rnncell_strict_econ_${SLURM_JOB_ID}"
+COST_PROXY_WEIGHT="${COST_PROXY_WEIGHT:-5.0}"
+OUTPUT_DIR="AIUC/outputs/rnncell_strict_econ_costw${COST_PROXY_WEIGHT}_${SLURM_JOB_ID}"
 DATA_PATH="AIUC/DG/uc_new_data_strict.npz"
 SPECS_PATH="AIUC/DG/generator_specs.csv"
+
+python - "$COST_PROXY_WEIGHT" <<'PY'
+import math
+import sys
+
+weight = float(sys.argv[1])
+if not math.isfinite(weight) or weight < 0:
+    raise ValueError("COST_PROXY_WEIGHT must be a finite non-negative number")
+print(f"Phase 2 cost proxy weight: {weight:g}")
+PY
 
 python - "$DATA_PATH" <<'PY'
 import sys
@@ -54,8 +65,8 @@ python -u AIUC/train_rnncell_strict_econ.py \
   --phase2-learning-rate 3e-5 \
   --reduce-lr-patience 8 \
   --reduce-lr-factor 0.5 \
-  --phase2-status-loss-weight 0.5 \
+  --phase2-status-loss-weight 1 \
   --phase2-power-loss-weight 1 \
   --phase2-balance-loss-weight 0 \
-  --phase2-cost-loss-weight 0.05 \
+  --phase2-cost-loss-weight "$COST_PROXY_WEIGHT" \
   --verbose 2
