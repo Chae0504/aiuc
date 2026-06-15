@@ -14,6 +14,9 @@ no-allocation baselines `22376` and `22377`, see
 For a compact map of the active model branches, see
 [`STRICT_MODEL_SUMMARY.md`](STRICT_MODEL_SUMMARY.md).
 
+The controlled commitment-cost proxy sweep is recorded in
+[`COST_PROXY_EXPERIMENTS.md`](COST_PROXY_EXPERIMENTS.md).
+
 ### Strict Baselines Without Allocation
 
 | Date | Job ID | Git Commit | Description | Status Acc. | Power MAE | Mismatch MAE (% demand) | Cost Diff. | Notes |
@@ -36,6 +39,9 @@ Safety-margin runs from `22454` are recorded separately in
 | 2026-06-10 | 28562 | 3e51f4d | Ramp-position-aware allocation with startup repair and cost-aware dispatch; Phase 2 balance weight=5 | 77.87% | 12.81 MW | 0.001 MW (0.00003%) | +4.25% | 117.57 MW | 0.00083% | 0.00098 / 0.000002 MW | Completed Phase 2 epoch 150; restored best epoch 148. Strongest strict-data result so far: improves average mismatch, tail shortage, power MAE, and cost vs 22496 |
 | 2026-06-11 | 30714 | 8bd3ee4 | Multi-step ramp-position-aware allocation with startup repair and cost-aware dispatch; Phase 2 balance weight=5 | 78.10% | 12.92 MW | 0.000004 MW (0.0000001%) | +4.31% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 42; restored best epoch 2. Generator-side hard constraints and balance are satisfied to numerical tolerance; cost is slightly worse than 28562 |
 | 2026-06-12 | 33220 | 7578feb | `30714` architecture with Phase 2 commitment cost proxy; status/power/balance/cost weights=`0.5/1/0/0.05` | 77.79% | 12.88 MW | 0.000004 MW (0.0000001%) | +4.39% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 43; restored best epoch 3. Physical feasibility is preserved, but cost worsens by 758.25/day vs 30714. Replay shows +4.38 online generator-hours/day and +0.252 startups/day; inference is 6.61 ms/sample on 5,000 samples |
+| 2026-06-14 | 35385 | b798c7f | Controlled cost-proxy sweep; weight=1, BCE/power/balance=`1/1/0`; 2 GPUs, global batch=128 | 77.84% | 13.04 MW | 0.000004 MW (0.0000001%) | +4.36% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 45; restored best epoch 5. Proxy fell 1.36%, but daily cost remains 478.06 above 30714 |
+| 2026-06-15 | 35926 | b798c7f | Controlled cost-proxy sweep; weight=5, BCE/power/balance=`1/1/0`; 2 GPUs, global batch=128 | 77.99% | 12.95 MW | 0.000004 MW (0.0000001%) | +4.32% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 45; restored best epoch 5. Best sweep result; daily cost is only 45.25 above 30714 |
+| 2026-06-15 | 36329 | b798c7f | Controlled cost-proxy sweep; weight=10, BCE/power/balance=`1/1/0`; 2 GPUs, global batch=128 | 77.89% | 12.96 MW | 0.000004 MW (0.0000001%) | +4.33% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 45; restored best epoch 5. Proxy falls slightly further, but higher linear production cost makes total cost worse than weight 5 |
 
 ## Legacy Dataset
 

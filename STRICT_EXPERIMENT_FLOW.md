@@ -1,8 +1,8 @@
 # Strict Experiment Flow
 
 This document summarizes the strict-dataset experiment flow from job `22368`
-to job `33220`, excluding the no-allocation strict baselines `22376` and
-`22377`.
+to the controlled cost-proxy sweep ending at job `36329`, excluding the
+no-allocation strict baselines `22376` and `22377`.
 
 The main question was: how can the model reduce power-balance mismatch while
 keeping strict UC feasibility and avoiding unnecessary cost increase?
@@ -22,6 +22,7 @@ The strict Gurobi reference average daily cost is `939,381.69`.
 | 7 | `28562` | The `22496` max replay showed that all units were already online, but previous-hour dispatch was too low for the next ramp. | Keep cost-aware dispatch, but pre-position current output so the next hour is reachable under ramp limits. | One-step ramp-position-aware allocation after cost-aware dispatch. | Yes. Mismatch max fell to `117.57 MW`, mismatch MAE fell to `0.001 MW`, and cost gap improved to `+4.25%`. | The remaining tail was mostly a dispatch-positioning issue. Reallocating current output without changing total generation can improve both reliability and cost. |
 | 8 | `30714` | The `28562` replay showed that the one-step repair ran out of receiver capacity at hour 19 before the hour-20 demand jump. | Pre-position output earlier than one hour ahead while preserving current balance and hard constraints. | Multi-step ramp-position-aware allocation. | Yes for feasibility. Mismatch max fell to `0.0005 MW` and all evaluated hard violations stayed zero. Cost gap rose slightly to `+4.31%`. | Physical feasibility is now essentially solved on the test set; the next question is economic optimality and closer Gurobi-like structure. |
 | 9 | `33220` | `30714` solved physical feasibility, but retained a `+4.31%` cost gap and restored Phase 2 best epoch 2. | Redirect Phase 2 from balance toward cheaper commitment patterns. | No-load plus startup cost proxy; Phase 2 status/power/balance/cost weights=`0.5/1/0/0.05`. | No economically. Feasibility stayed perfect and power MAE improved slightly, but cost gap worsened to `+4.39%`. | The proxy term was tiny relative to BCE/power loss. Because BCE was also halved, this run evaluates the combined weighting rather than isolating the proxy itself. |
+| 10 | `35385`, `35926`, `36329` | The first proxy run was confounded by a reduced BCE weight and an extremely small proxy contribution. | Isolate proxy scale while restoring BCE/power weights to `1/1` and keeping balance at `0`. | Controlled commitment-cost proxy sweep with weights `1`, `5`, and `10`; identical Phase 1 and 2-GPU batch configuration. | Partially. Weight 5 nearly matches 30714 cost while preserving feasibility, but remains 45.25/day higher. Weight 10 worsens total cost. | The proxy can shape commitment cost, but omitting linear production cost prevents monotonic improvement in the true UC objective. |
 
 ## Narrative
 
@@ -171,6 +172,29 @@ BCE weight likely changed the learned commitment structure more strongly than
 the proxy discouraged expensive commitments. Because both weights changed in
 the same run, this experiment does not isolate their individual effects.
 
+### 10. Controlled Proxy Scaling Found a Middle Optimum
+
+Jobs `35385`, `35926`, and `36329` used identical Phase 1 histories, two GPUs,
+global batch `128`, and Phase 2 BCE/power/balance weights of `1/1/0`. Only the
+cost-proxy weight changed.
+
+Weight `5` was the best setting:
+
+- weight 1: cost gap `+4.36%`
+- weight 5: cost gap `+4.32%`
+- weight 10: cost gap `+4.33%`
+
+All three preserved numerical balance and zero evaluated hard violations.
+The best validation proxy decreased more as weight increased, from a `1.36%`
+reduction at weight 1 to `2.70%` at weight 10. Nevertheless, true cost was not
+monotonic.
+
+From weight 5 to weight 10, no-load plus startup cost decreased by about
+`7.31` per day, but linear production cost increased by about `104.94`.
+This demonstrates that the current proxy is internally effective but
+incomplete. The next objective should include linear production cost rather
+than applying still more pressure to no-load and startup terms.
+
 ## Current Best Interpretation
 
 Job `30714` is now the strongest strict-data result for physical feasibility:
@@ -192,10 +216,9 @@ differentiable commitment-cost signal can be added without breaking physical
 feasibility, but the first scaling and loss balance are not economically
 effective.
 
-The next controlled comparison should keep the `30714` Phase 2 status weight
-at `1.0`, keep balance weight at `0`, and vary only the cost-proxy scale while
-logging the proxy as its own metric. That would separate the effect of the
-economic signal from the effect of weakening imitation learning.
+The controlled sweep confirms weight `5` as the best current economic-loss
+variant, but `30714` remains slightly cheaper and remains the physical
+baseline.
 
 ## Next Research Direction
 
@@ -215,5 +238,5 @@ The next likely methods are:
 
 - cost-aware commitment pruning after feasibility repair;
 - stronger imitation learning for commitment patterns;
-- startup/no-load cost proxies, not only linear dispatch cost;
+- a full differentiable cost objective including linear production cost;
 - or a small feasibility-preserving economic projection layer.

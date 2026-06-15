@@ -15,7 +15,7 @@ current physical-feasibility baseline.
 | `startup` | `slurm/run_rnncell_strict_allocation_startup_repair.sh` | `train_rnncell_strict_allocation_startup_repair.py` | Look-ahead startup repair | `22496` | Reduces late-startup tail cases |
 | `ramp_pos` | `slurm/run_rnncell_strict_allocation_ramp_position.sh` | `train_rnncell_strict_allocation_ramp_position.py` | One-step ramp-position-aware allocation | `28562` | Better tail and cost than startup branch, but one rare shortage remains |
 | `multiramp` | `slurm/run_rnncell_strict_allocation_multistep_ramp_position.sh` | `train_rnncell_strict_allocation_multistep_ramp_position.py` | Multi-step ramp-position-aware allocation | `30714` | Current physical-feasibility baseline |
-| `strict_econ` | `slurm/run_rnncell_strict_econ.sh` | `train_rnncell_strict_econ.py` | Same architecture as `multiramp`, but Phase 2 optimizes a commitment cost proxy | `33220` | First economic-loss test; feasibility preserved but cost did not improve |
+| `strict_econ` | `slurm/run_rnncell_strict_econ.sh` | `train_rnncell_strict_econ.py` | Same architecture as `multiramp`, but Phase 2 optimizes a commitment cost proxy | `35385`, `35926`, `36329` | Weight 5 is the best controlled proxy scale, but does not beat 30714 |
 
 ## Current Baseline
 
@@ -76,3 +76,14 @@ For two GPUs on `ego-g01`:
 ```bash
 COST_PROXY_WEIGHT=5 sbatch slurm/run_rnncell_strict_econ_2gpu.sh
 ```
+
+The controlled `1/5/10` sweep found weight `5` to be best:
+
+- weight 1: cost gap `+4.36%`
+- weight 5: cost gap `+4.32%`
+- weight 10: cost gap `+4.33%`
+
+Weight `10` reduces the commitment proxy slightly more but increases linear
+production cost. The next branch should add linear production cost to the
+economic objective instead of increasing this proxy further. See
+[`COST_PROXY_EXPERIMENTS.md`](COST_PROXY_EXPERIMENTS.md).
