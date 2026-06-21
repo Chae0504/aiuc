@@ -1,5 +1,6 @@
 """Strict ramp-aware proportional-allocation variant of the UC RNN."""
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import (
     Activation,
@@ -16,6 +17,7 @@ from tensorflow.keras.models import Model
 
 from legacy.rnncell_model import (
     BatchZeros,
+    CostWeightedBinaryCrossentropy,
     OnlyMismatchLoss,
     PhysicsInformedUCCell,
     ste_binarize,
@@ -229,6 +231,8 @@ def build_hybrid_uc_strict_allocation_model(
     model_name="physics_informed_uc_rnn_strict_allocation",
     cell_kwargs=None,
     extra_decoder_context_fn=None,
+    status_loss_mode="bce",
+    status_false_on_alpha=0.5,
 ):
     if cell_kwargs is None:
         cell_kwargs = {}
@@ -289,6 +293,19 @@ def build_hybrid_uc_strict_allocation_model(
             input_init_down_hours,
         ],
     )
+    status_loss = "binary_crossentropy"
+    if status_loss_mode == "cost_weighted_bce":
+        commitment_cost = specs["noload_cost"] + specs["linear_cost"] * specs["p_min"]
+        max_commitment_cost = float(np.max(commitment_cost))
+        if max_commitment_cost <= 0.0:
+            raise ValueError("Commitment costs must be positive for cost_weighted_bce")
+        off_weight = 1.0 + float(status_false_on_alpha) * (
+            commitment_cost / max_commitment_cost
+        )
+        status_loss = CostWeightedBinaryCrossentropy(off_weight)
+    elif status_loss_mode != "bce":
+        raise ValueError(f"Unsupported status_loss_mode: {status_loss_mode}")
+
     status_raw, power_raw = OnlyMismatchLoss(
         num_gens,
         demand_normalizer_mw=demand_normalizer_mw,
@@ -306,6 +323,7 @@ def build_hybrid_uc_strict_allocation_model(
                 + specs["startup_cost"].sum()
             )
         ),
+        status_loss=status_loss,
         name="mismatch_loss_layer",
     )([input_dynamic, rnn_outputs])
     out_status = Activation("linear", name="out_status")(status_raw)

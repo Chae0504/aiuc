@@ -17,6 +17,9 @@ For a compact map of the active model branches, see
 The controlled commitment-cost proxy sweep is recorded in
 [`COST_PROXY_EXPERIMENTS.md`](COST_PROXY_EXPERIMENTS.md).
 
+The asymmetric false-ON BCE sweep is recorded in
+[`ASYMMETRIC_BCE_EXPERIMENTS.md`](ASYMMETRIC_BCE_EXPERIMENTS.md).
+
 ### Strict Baselines Without Allocation
 
 | Date | Job ID | Git Commit | Description | Status Acc. | Power MAE | Mismatch MAE (% demand) | Cost Diff. | Notes |
@@ -42,6 +45,9 @@ Safety-margin runs from `22454` are recorded separately in
 | 2026-06-14 | 35385 | b798c7f | Controlled cost-proxy sweep; weight=1, BCE/power/balance=`1/1/0`; 2 GPUs, global batch=128 | 77.84% | 13.04 MW | 0.000004 MW (0.0000001%) | +4.36% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 45; restored best epoch 5. Proxy fell 1.36%, but daily cost remains 478.06 above 30714 |
 | 2026-06-15 | 35926 | b798c7f | Controlled cost-proxy sweep; weight=5, BCE/power/balance=`1/1/0`; 2 GPUs, global batch=128 | 77.99% | 12.95 MW | 0.000004 MW (0.0000001%) | +4.32% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 45; restored best epoch 5. Best sweep result; daily cost is only 45.25 above 30714 |
 | 2026-06-15 | 36329 | b798c7f | Controlled cost-proxy sweep; weight=10, BCE/power/balance=`1/1/0`; 2 GPUs, global batch=128 | 77.89% | 12.96 MW | 0.000004 MW (0.0000001%) | +4.33% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 45; restored best epoch 5. Proxy falls slightly further, but higher linear production cost makes total cost worse than weight 5 |
+| 2026-06-18 | 39104 | d66c424 | `30714` architecture with cost-weighted false-ON BCE; alpha=0.5; 2 GPUs, global batch=64 | 77.90% | 12.61 MW | 0.000004 MW (0.0000001%) | +4.38% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 41; restored best epoch 1. Best asymmetric-BCE run, but daily cost is 590.31 above 30714 |
+| 2026-06-19 | 40234 | d66c424 | `30714` architecture with cost-weighted false-ON BCE; alpha=1.0; 2 GPUs, global batch=64 | 76.45% | 12.33 MW | 0.000004 MW (0.0000001%) | +4.79% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 42; restored best epoch 2. Lowest power MAE in this sweep, but cost worsens by 4,474.06/day vs 30714 |
+| 2026-06-21 | 41987 | d66c424 | `30714` architecture with cost-weighted false-ON BCE; alpha=1.5; 2 GPUs, global batch=64 | 77.32% | 12.63 MW | 0.000004 MW (0.0000001%) | +4.59% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 43; restored best epoch 3. Larger alpha does not recover cost; feasibility remains numerically perfect |
 
 ## Legacy Dataset
 

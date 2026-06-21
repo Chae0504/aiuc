@@ -25,3 +25,13 @@ Both runners default to global batch `64`, so the 2-GPU result remains directly
 comparable with the 1-GPU experiment. This gives batch `32` per replica.
 For a throughput-oriented run, use `GLOBAL_BATCH_SIZE=128`, but treat it as a
 separate hyperparameter experiment because it changes optimization behavior.
+
+For the 30714 architecture with cost-weighted false-ON BCE:
+
+```bash
+FALSE_ON_ALPHA=0.5 sbatch slurm/run_rnncell_strict_asym_bce_2gpu.sh
+```
+
+This branch keeps balance weight `5` and cost-proxy weight `0`; only the status
+BCE is changed. Larger `FALSE_ON_ALPHA` penalizes expensive false-ON commitment
+errors more strongly.

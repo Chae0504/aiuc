@@ -69,6 +69,37 @@ class PowerBalanceMismatchMAE(tf.keras.metrics.Metric):
 
 
 @tf.keras.utils.register_keras_serializable(package="AIUC")
+class CostWeightedBinaryCrossentropy(tf.keras.losses.Loss):
+    """Binary crossentropy with generator-specific false-ON weights."""
+
+    def __init__(
+        self,
+        off_weight_vals,
+        name="cost_weighted_binary_crossentropy",
+        reduction="sum_over_batch_size",
+    ):
+        super().__init__(name=name, reduction=reduction)
+        self.off_weight_vals = list(off_weight_vals)
+        if not self.off_weight_vals:
+            raise ValueError("off_weight_vals must not be empty")
+        self.off_weight = tf.constant(self.off_weight_vals, dtype=tf.float32)
+
+    def call(self, y_true, y_pred):
+        y_true = tf.cast(y_true, tf.float32)
+        epsilon = tf.keras.backend.epsilon()
+        y_pred = tf.clip_by_value(y_pred, epsilon, 1.0 - epsilon)
+        bce = -(
+            y_true * tf.math.log(y_pred)
+            + (1.0 - y_true) * tf.math.log(1.0 - y_pred)
+        )
+        weights = y_true + (1.0 - y_true) * self.off_weight
+        return tf.reduce_mean(bce * weights)
+
+    def get_config(self):
+        return {**super().get_config(), "off_weight_vals": self.off_weight_vals}
+
+
+@tf.keras.utils.register_keras_serializable(package="AIUC")
 def ste_binarize(x):
     """Round in the forward pass while keeping a straight-through gradient."""
     return x + tf.stop_gradient(tf.round(x) - x)
@@ -230,6 +261,7 @@ class OnlyMismatchLoss(Layer):
         initial_status_vals=None,
         cost_normalizer=1.0,
         cost_loss_weight=0.0,
+        status_loss=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -247,6 +279,12 @@ class OnlyMismatchLoss(Layer):
         )
         self.cost_normalizer = float(cost_normalizer)
         self.cost_loss_weight = float(cost_loss_weight)
+        if isinstance(status_loss, dict):
+            self.status_loss = tf.keras.losses.deserialize(status_loss)
+        else:
+            self.status_loss = (
+                status_loss if status_loss is not None else "binary_crossentropy"
+            )
         if self.demand_normalizer_mw <= 0:
             raise ValueError("demand_normalizer_mw must be positive")
         if self.cost_normalizer <= 0:
@@ -327,6 +365,11 @@ class OnlyMismatchLoss(Layer):
             "initial_status_vals": self.initial_status_vals,
             "cost_normalizer": self.cost_normalizer,
             "cost_loss_weight": self.cost_loss_weight,
+            "status_loss": (
+                self.status_loss
+                if isinstance(self.status_loss, str)
+                else tf.keras.losses.serialize(self.status_loss)
+            ),
         }
 
 

@@ -16,6 +16,7 @@ current physical-feasibility baseline.
 | `ramp_pos` | `slurm/run_rnncell_strict_allocation_ramp_position.sh` | `train_rnncell_strict_allocation_ramp_position.py` | One-step ramp-position-aware allocation | `28562` | Better tail and cost than startup branch, but one rare shortage remains |
 | `multiramp` | `slurm/run_rnncell_strict_allocation_multistep_ramp_position.sh` | `train_rnncell_strict_allocation_multistep_ramp_position.py` | Multi-step ramp-position-aware allocation | `30714` | Current physical-feasibility baseline |
 | `strict_econ` | `slurm/run_rnncell_strict_econ.sh` | `train_rnncell_strict_econ.py` | Same architecture as `multiramp`, but Phase 2 optimizes a commitment cost proxy | `35385`, `35926`, `36329` | Weight 5 is the best controlled proxy scale, but does not beat 30714 |
+| `asym_bce` | `slurm/run_rnncell_strict_asym_bce_2gpu.sh` | `train_rnncell_strict_asym_bce.py` | Same architecture as `multiramp`, but false-ON status BCE is weighted by commitment cost | `39104`, `40234`, `41987` | Negative diagnostic; preserves feasibility but worsens cost versus 30714 |
 
 ## Current Baseline
 
@@ -87,3 +88,20 @@ Weight `10` reduces the commitment proxy slightly more but increases linear
 production cost. The next branch should add linear production cost to the
 economic objective instead of increasing this proxy further. See
 [`COST_PROXY_EXPERIMENTS.md`](COST_PROXY_EXPERIMENTS.md).
+
+## Asymmetric BCE Result: `asym_bce`
+
+`asym_bce` also keeps the `30714` architecture, but changes the status
+imitation loss instead of adding a separate cost proxy. False-ON errors are
+weighted by generator commitment cost.
+
+The `alpha=0.5/1.0/1.5` sweep preserved physical feasibility, but did not
+improve cost:
+
+- alpha 0.5 / job `39104`: cost gap `+4.38%`
+- alpha 1.0 / job `40234`: cost gap `+4.79%`
+- alpha 1.5 / job `41987`: cost gap `+4.59%`
+
+Alpha `0.5` is the best asymmetric-BCE setting, but it remains `590.31` per day
+more expensive than `30714`. See
+[`ASYMMETRIC_BCE_EXPERIMENTS.md`](ASYMMETRIC_BCE_EXPERIMENTS.md).

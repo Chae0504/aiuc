@@ -219,6 +219,10 @@ def train_and_evaluate(
     model_kwargs = {}
     if "lookahead_safety_margin_mw" in inspect.signature(build_model).parameters:
         model_kwargs["lookahead_safety_margin_mw"] = args.lookahead_safety_margin_mw
+    if "status_loss_mode" in inspect.signature(build_model).parameters:
+        model_kwargs["status_loss_mode"] = args.status_loss_mode
+    if "status_false_on_alpha" in inspect.signature(build_model).parameters:
+        model_kwargs["status_false_on_alpha"] = args.status_false_on_alpha
 
     with strategy.scope():
         model = build_model(

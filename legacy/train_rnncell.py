@@ -58,6 +58,21 @@ def parse_args():
     parser.add_argument("--phase2-power-loss-weight", type=float, default=1.0)
     parser.add_argument("--phase2-balance-loss-weight", type=float, default=2.0)
     parser.add_argument("--phase2-cost-loss-weight", type=float, default=0.0)
+    parser.add_argument(
+        "--status-loss-mode",
+        choices=["bce", "cost_weighted_bce"],
+        default="bce",
+        help="Status imitation loss. cost_weighted_bce penalizes false ONs more.",
+    )
+    parser.add_argument(
+        "--status-false-on-alpha",
+        type=float,
+        default=0.5,
+        help=(
+            "Extra false-ON weight scale for cost_weighted_bce. "
+            "A generator's OFF-target weight is 1 + alpha * normalized_cost."
+        ),
+    )
     parser.add_argument("--reduce-lr-patience", type=int, default=8)
     parser.add_argument("--reduce-lr-factor", type=float, default=0.5)
     parser.add_argument("--min-learning-rate", type=float, default=1e-6)
@@ -197,10 +212,12 @@ def compile_model(
 ):
     from legacy.rnncell_model import NormalizedMeanAbsoluteError, PowerBalanceMismatchMAE
 
+    mismatch_layer = model.get_layer("mismatch_loss_layer")
+    status_loss = getattr(mismatch_layer, "status_loss", "binary_crossentropy")
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
         loss={
-            "out_status": "binary_crossentropy",
+            "out_status": status_loss,
             "out_power": NormalizedMeanAbsoluteError(power_normalizer_mw),
         },
         loss_weights={
@@ -268,9 +285,10 @@ def print_loss_configuration(
     cost_loss_weight,
     power_normalizer_mw,
     demand_normalizer_mw,
+    status_loss_mode,
 ):
     print(
-        f"{phase} loss = {status_loss_weight:g} * status_BCE"
+        f"{phase} loss = {status_loss_weight:g} * {status_loss_mode}"
         f" + {power_loss_weight:g} * (power_MAE_MW / {power_normalizer_mw:.2f})"
         f" + {balance_loss_weight:g} * (mismatch_MAE_MW / {demand_normalizer_mw:.2f})"
         f" + {cost_loss_weight:g} * normalized_commitment_cost_proxy",
@@ -306,6 +324,7 @@ def train_two_phases(
         args.phase1_cost_loss_weight,
         power_normalizer_mw,
         demand_normalizer_mw,
+        args.status_loss_mode,
     )
     with strategy_scope():
         compile_model(
@@ -347,6 +366,7 @@ def train_two_phases(
         args.phase2_cost_loss_weight,
         power_normalizer_mw,
         demand_normalizer_mw,
+        args.status_loss_mode,
     )
     with strategy_scope():
         compile_model(

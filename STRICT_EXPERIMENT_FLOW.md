@@ -1,7 +1,7 @@
 # Strict Experiment Flow
 
 This document summarizes the strict-dataset experiment flow from job `22368`
-to the controlled cost-proxy sweep ending at job `36329`, excluding the
+to the asymmetric BCE sweep ending at job `41987`, excluding the
 no-allocation strict baselines `22376` and `22377`.
 
 The main question was: how can the model reduce power-balance mismatch while
@@ -23,6 +23,7 @@ The strict Gurobi reference average daily cost is `939,381.69`.
 | 8 | `30714` | The `28562` replay showed that the one-step repair ran out of receiver capacity at hour 19 before the hour-20 demand jump. | Pre-position output earlier than one hour ahead while preserving current balance and hard constraints. | Multi-step ramp-position-aware allocation. | Yes for feasibility. Mismatch max fell to `0.0005 MW` and all evaluated hard violations stayed zero. Cost gap rose slightly to `+4.31%`. | Physical feasibility is now essentially solved on the test set; the next question is economic optimality and closer Gurobi-like structure. |
 | 9 | `33220` | `30714` solved physical feasibility, but retained a `+4.31%` cost gap and restored Phase 2 best epoch 2. | Redirect Phase 2 from balance toward cheaper commitment patterns. | No-load plus startup cost proxy; Phase 2 status/power/balance/cost weights=`0.5/1/0/0.05`. | No economically. Feasibility stayed perfect and power MAE improved slightly, but cost gap worsened to `+4.39%`. | The proxy term was tiny relative to BCE/power loss. Because BCE was also halved, this run evaluates the combined weighting rather than isolating the proxy itself. |
 | 10 | `35385`, `35926`, `36329` | The first proxy run was confounded by a reduced BCE weight and an extremely small proxy contribution. | Isolate proxy scale while restoring BCE/power weights to `1/1` and keeping balance at `0`. | Controlled commitment-cost proxy sweep with weights `1`, `5`, and `10`; identical Phase 1 and 2-GPU batch configuration. | Partially. Weight 5 nearly matches 30714 cost while preserving feasibility, but remains 45.25/day higher. Weight 10 worsens total cost. | The proxy can shape commitment cost, but omitting linear production cost prevents monotonic improvement in the true UC objective. |
+| 11 | `39104`, `40234`, `41987` | Proxy-only pressure did not reliably reduce true cost, and unnecessary false-ON commitments were still a suspect. | Test whether status imitation can directly discourage expensive false-ON commitments while preserving 30714 feasibility. | Cost-weighted asymmetric BCE for false-ON labels; alpha sweep `0.5`, `1.0`, `1.5`; 2 GPUs, global batch `64`. | No economically. Feasibility stayed perfect and power MAE improved, but best cost gap worsened to `+4.38%`. | Generator-wise false-ON weighting is too local; true cost depends on the replacement commitment, linear dispatch, and future ramp trajectory. |
 
 ## Narrative
 
@@ -195,6 +196,42 @@ This demonstrates that the current proxy is internally effective but
 incomplete. The next objective should include linear production cost rather
 than applying still more pressure to no-load and startup terms.
 
+### 11. Asymmetric BCE Was a Useful Negative Diagnostic
+
+Jobs `39104`, `40234`, and `41987` kept the full `30714` architecture and
+changed only the status imitation term. The BCE loss was weighted more heavily
+when the Gurobi label was OFF and the predicted unit was ON, with generator
+weights proportional to no-load plus minimum-output linear cost.
+
+This tested a specific hypothesis: if the model is more strongly punished for
+turning on expensive OFF-label units, it might reduce unnecessary commitments
+and become cheaper without changing the deterministic feasibility layers.
+
+The physical result was exactly as desired:
+
+- mismatch MAE stayed around `0.000004 MW`;
+- max mismatch stayed `0.0005 MW`;
+- mismatch over 10 MW stayed `0.00%`;
+- all evaluated hard violations stayed zero.
+
+The economic result was negative:
+
+- alpha `0.5` / job `39104`: cost gap `+4.38%`;
+- alpha `1.0` / job `40234`: cost gap `+4.79%`;
+- alpha `1.5` / job `41987`: cost gap `+4.59%`.
+
+Alpha `0.5` was the best setting, but it was still `590.31` per day more
+expensive than `30714`. Alpha `1.0` achieved the lowest power MAE in the sweep
+(`12.33 MW`), but its status accuracy fell to `76.45%` and cost worsened by
+`4,474.06` per day relative to `30714`.
+
+The lesson is that false-ON weighting is not enough to optimize UC cost. It can
+discourage one generator from being online, but it does not know whether the
+replacement schedule requires more expensive production, creates a worse ramp
+position, or forces future commitment changes. The next economic step should
+optimize the joint commitment-dispatch cost, especially the linear production
+term, or use a feasibility-preserving economic projection/decommitment layer.
+
 ## Current Best Interpretation
 
 Job `30714` is now the strongest strict-data result for physical feasibility:
@@ -219,6 +256,10 @@ effective.
 The controlled sweep confirms weight `5` as the best current economic-loss
 variant, but `30714` remains slightly cheaper and remains the physical
 baseline.
+
+The asymmetric BCE sweep confirms that generator-wise false-ON penalties are
+also insufficient as a standalone economic objective. It preserves feasibility
+but does not beat either `30714` or the controlled proxy weight-5 result.
 
 ## Next Research Direction
 
