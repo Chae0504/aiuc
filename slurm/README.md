@@ -35,3 +35,12 @@ FALSE_ON_ALPHA=0.5 sbatch slurm/run_rnncell_strict_asym_bce_2gpu.sh
 This branch keeps balance weight `5` and cost-proxy weight `0`; only the status
 BCE is changed. Larger `FALSE_ON_ALPHA` penalizes expensive false-ON commitment
 errors more strongly.
+
+For the 30714 architecture with startup/shutdown transition imitation:
+
+```bash
+TRANSITION_WEIGHT=0.5 sbatch slurm/run_rnncell_strict_transition_2gpu.sh
+```
+
+This branch keeps the physical layers unchanged and changes only the status
+loss to `BCE + TRANSITION_WEIGHT * transition_MAE`.

@@ -86,6 +86,13 @@ def evaluate_strict(model, test_inputs, demand, true_status, true_power, specs, 
         ),
         axis=1,
     )
+    true_previous_status = np.concatenate(
+        (
+            np.repeat(specs["init_status"][np.newaxis, np.newaxis, :], num_samples, axis=0),
+            true_status[:, :-1, :],
+        ),
+        axis=1,
+    )
     previous_power = np.concatenate(
         (
             np.repeat(specs["init_power_mw"][np.newaxis, np.newaxis, :], num_samples, axis=0),
@@ -97,6 +104,14 @@ def evaluate_strict(model, test_inputs, demand, true_status, true_power, specs, 
     startup = (previous_status < 0.5) & online
     shutdown = (previous_status > 0.5) & ~online
     stay_online = (previous_status > 0.5) & online
+    true_startup = ((true_previous_status < 0.5) & (true_status > 0.5)).astype(
+        np.float32
+    )
+    true_shutdown = ((true_previous_status > 0.5) & (true_status < 0.5)).astype(
+        np.float32
+    )
+    pred_startup = startup.astype(np.float32)
+    pred_shutdown = shutdown.astype(np.float32)
 
     pred_total_power = np.sum(pred_power, axis=-1)
     power_balance_error = pred_total_power - demand.squeeze(-1)
@@ -140,6 +155,20 @@ def evaluate_strict(model, test_inputs, demand, true_status, true_power, specs, 
         "ramp_violation_mw": float(np.mean(np.sum(ramp, axis=-1))),
         "startup_cap_violation_mw": float(np.mean(np.sum(startup_cap, axis=-1))),
         "shutdown_cap_violation_mw": float(np.mean(np.sum(shutdown_cap, axis=-1))),
+        "online_hours_per_day_true": float(np.mean(np.sum(true_status, axis=(1, 2)))),
+        "online_hours_per_day_pred": float(np.mean(np.sum(pred_status_bin, axis=(1, 2)))),
+        "startup_count_per_day_true": float(np.mean(np.sum(true_startup, axis=(1, 2)))),
+        "startup_count_per_day_pred": float(np.mean(np.sum(pred_startup, axis=(1, 2)))),
+        "shutdown_count_per_day_true": float(np.mean(np.sum(true_shutdown, axis=(1, 2)))),
+        "shutdown_count_per_day_pred": float(np.mean(np.sum(pred_shutdown, axis=(1, 2)))),
+        "startup_event_mae": float(np.mean(np.abs(pred_startup - true_startup))),
+        "shutdown_event_mae": float(np.mean(np.abs(pred_shutdown - true_shutdown))),
+        "transition_event_mae": float(
+            np.mean(
+                np.abs(pred_startup - true_startup)
+                + np.abs(pred_shutdown - true_shutdown)
+            )
+        ),
         "minimum_time_violations_total": count_minimum_time_violations(
             pred_status_bin, validation_specs
         ),
@@ -223,6 +252,10 @@ def train_and_evaluate(
         model_kwargs["status_loss_mode"] = args.status_loss_mode
     if "status_false_on_alpha" in inspect.signature(build_model).parameters:
         model_kwargs["status_false_on_alpha"] = args.status_false_on_alpha
+    if "status_transition_loss_weight" in inspect.signature(build_model).parameters:
+        model_kwargs["status_transition_loss_weight"] = (
+            args.status_transition_loss_weight
+        )
 
     with strategy.scope():
         model = build_model(

@@ -17,6 +17,7 @@ current physical-feasibility baseline.
 | `multiramp` | `slurm/run_rnncell_strict_allocation_multistep_ramp_position.sh` | `train_rnncell_strict_allocation_multistep_ramp_position.py` | Multi-step ramp-position-aware allocation | `30714` | Current physical-feasibility baseline |
 | `strict_econ` | `slurm/run_rnncell_strict_econ.sh` | `train_rnncell_strict_econ.py` | Same architecture as `multiramp`, but Phase 2 optimizes a commitment cost proxy | `35385`, `35926`, `36329` | Weight 5 is the best controlled proxy scale, but does not beat 30714 |
 | `asym_bce` | `slurm/run_rnncell_strict_asym_bce_2gpu.sh` | `train_rnncell_strict_asym_bce.py` | Same architecture as `multiramp`, but false-ON status BCE is weighted by commitment cost | `39104`, `40234`, `41987` | Negative diagnostic; preserves feasibility but worsens cost versus 30714 |
+| `transition` | `slurm/run_rnncell_strict_transition_2gpu.sh` | `train_rnncell_strict_transition.py` | Same architecture as `multiramp`, but status loss includes startup/shutdown transition imitation | `42010`, `42043`, `42059`, `42060`, `42061` | Best learning-objective branch so far; weight 5 improves cost without adding a physical layer |
 
 ## Current Baseline
 
@@ -105,3 +106,18 @@ improve cost:
 Alpha `0.5` is the best asymmetric-BCE setting, but it remains `590.31` per day
 more expensive than `30714`. See
 [`ASYMMETRIC_BCE_EXPERIMENTS.md`](ASYMMETRIC_BCE_EXPERIMENTS.md).
+
+## Transition-Loss Result: `transition`
+
+`transition` keeps the `30714` physical architecture and adds startup/shutdown
+timing imitation to the status loss. This is the first post-30714 learning
+objective that improves cost without adding another physical layer.
+
+The `0.5/1.0/1.5/2.0/5.0` sweep found two useful regions:
+
+- weight 1.0 / job `42043`: cost gap `+4.30%`, `148.63` per day cheaper than `30714`
+- weight 5.0 / job `42061`: cost gap `+4.27%`, `426.75` per day cheaper than `30714`
+
+Weight `2.0` is a cautionary case: power MAE improves, but cost worsens sharply
+to `+4.75%`. The objective is useful but scale-sensitive. See
+[`TRANSITION_LOSS_EXPERIMENTS.md`](TRANSITION_LOSS_EXPERIMENTS.md).

@@ -126,6 +126,7 @@ def build_hybrid_uc_strict_allocation_multistep_ramp_position_model(
     lookahead_safety_margin_mw=0.0,
     status_loss_mode="bce",
     status_false_on_alpha=0.5,
+    status_transition_loss_weight=0.5,
 ):
     if lookahead_hours is None:
         lookahead_hours = int(np.max(specs["mdt"]))
@@ -155,4 +156,5 @@ def build_hybrid_uc_strict_allocation_multistep_ramp_position_model(
         extra_decoder_context_fn=make_extra_decoder_context,
         status_loss_mode=status_loss_mode,
         status_false_on_alpha=status_false_on_alpha,
+        status_transition_loss_weight=status_transition_loss_weight,
     )

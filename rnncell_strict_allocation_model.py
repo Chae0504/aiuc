@@ -20,6 +20,7 @@ from legacy.rnncell_model import (
     CostWeightedBinaryCrossentropy,
     OnlyMismatchLoss,
     PhysicsInformedUCCell,
+    TransitionBinaryCrossentropy,
     ste_binarize,
 )
 
@@ -233,6 +234,7 @@ def build_hybrid_uc_strict_allocation_model(
     extra_decoder_context_fn=None,
     status_loss_mode="bce",
     status_false_on_alpha=0.5,
+    status_transition_loss_weight=0.5,
 ):
     if cell_kwargs is None:
         cell_kwargs = {}
@@ -303,6 +305,11 @@ def build_hybrid_uc_strict_allocation_model(
             commitment_cost / max_commitment_cost
         )
         status_loss = CostWeightedBinaryCrossentropy(off_weight)
+    elif status_loss_mode == "transition_bce":
+        status_loss = TransitionBinaryCrossentropy(
+            transition_weight=status_transition_loss_weight,
+            initial_status_vals=specs["init_status"],
+        )
     elif status_loss_mode != "bce":
         raise ValueError(f"Unsupported status_loss_mode: {status_loss_mode}")
 

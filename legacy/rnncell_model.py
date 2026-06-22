@@ -100,6 +100,73 @@ class CostWeightedBinaryCrossentropy(tf.keras.losses.Loss):
 
 
 @tf.keras.utils.register_keras_serializable(package="AIUC")
+class TransitionBinaryCrossentropy(tf.keras.losses.Loss):
+    """Binary crossentropy plus startup/shutdown transition imitation."""
+
+    def __init__(
+        self,
+        transition_weight=0.5,
+        initial_status_vals=None,
+        name="transition_binary_crossentropy",
+        reduction="sum_over_batch_size",
+    ):
+        super().__init__(name=name, reduction=reduction)
+        self.transition_weight = float(transition_weight)
+        self.initial_status_vals = (
+            None if initial_status_vals is None else list(initial_status_vals)
+        )
+        if self.transition_weight < 0:
+            raise ValueError("transition_weight must be non-negative")
+        self.initial_status = (
+            None
+            if self.initial_status_vals is None
+            else tf.constant(self.initial_status_vals, dtype=tf.float32)
+        )
+
+    def call(self, y_true, y_pred):
+        y_true = tf.cast(y_true, tf.float32)
+        epsilon = tf.keras.backend.epsilon()
+        y_pred = tf.clip_by_value(y_pred, epsilon, 1.0 - epsilon)
+        bce = -(
+            y_true * tf.math.log(y_pred)
+            + (1.0 - y_true) * tf.math.log(1.0 - y_pred)
+        )
+        status_loss = tf.reduce_mean(bce)
+
+        if self.initial_status is None:
+            true_prev = y_true[:, :-1, :]
+            true_curr = y_true[:, 1:, :]
+            pred_prev = y_pred[:, :-1, :]
+            pred_curr = y_pred[:, 1:, :]
+        else:
+            initial_status = tf.tile(
+                self.initial_status[tf.newaxis, tf.newaxis, :],
+                [tf.shape(y_true)[0], 1, 1],
+            )
+            true_prev = tf.concat([initial_status, y_true[:, :-1, :]], axis=1)
+            pred_prev = tf.concat([initial_status, y_pred[:, :-1, :]], axis=1)
+            true_curr = y_true
+            pred_curr = y_pred
+
+        true_startup = tf.nn.relu(true_curr - true_prev)
+        pred_startup = tf.nn.relu(pred_curr - pred_prev)
+        true_shutdown = tf.nn.relu(true_prev - true_curr)
+        pred_shutdown = tf.nn.relu(pred_prev - pred_curr)
+        transition_loss = tf.reduce_mean(
+            tf.abs(pred_startup - true_startup)
+            + tf.abs(pred_shutdown - true_shutdown)
+        )
+        return status_loss + self.transition_weight * transition_loss
+
+    def get_config(self):
+        return {
+            **super().get_config(),
+            "transition_weight": self.transition_weight,
+            "initial_status_vals": self.initial_status_vals,
+        }
+
+
+@tf.keras.utils.register_keras_serializable(package="AIUC")
 def ste_binarize(x):
     """Round in the forward pass while keeping a straight-through gradient."""
     return x + tf.stop_gradient(tf.round(x) - x)

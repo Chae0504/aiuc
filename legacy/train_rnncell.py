@@ -60,9 +60,12 @@ def parse_args():
     parser.add_argument("--phase2-cost-loss-weight", type=float, default=0.0)
     parser.add_argument(
         "--status-loss-mode",
-        choices=["bce", "cost_weighted_bce"],
+        choices=["bce", "cost_weighted_bce", "transition_bce"],
         default="bce",
-        help="Status imitation loss. cost_weighted_bce penalizes false ONs more.",
+        help=(
+            "Status imitation loss. cost_weighted_bce penalizes false ONs more; "
+            "transition_bce adds startup/shutdown timing imitation."
+        ),
     )
     parser.add_argument(
         "--status-false-on-alpha",
@@ -72,6 +75,12 @@ def parse_args():
             "Extra false-ON weight scale for cost_weighted_bce. "
             "A generator's OFF-target weight is 1 + alpha * normalized_cost."
         ),
+    )
+    parser.add_argument(
+        "--status-transition-loss-weight",
+        type=float,
+        default=0.5,
+        help="Startup/shutdown transition MAE weight for transition_bce.",
     )
     parser.add_argument("--reduce-lr-patience", type=int, default=8)
     parser.add_argument("--reduce-lr-factor", type=float, default=0.5)
