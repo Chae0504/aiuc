@@ -31,6 +31,19 @@ All three asymmetric BCE runs preserve the solved physical behavior:
 - ghost/capacity/ramp/startup-cap/shutdown-cap violations: zero
 - MUT/MDT violations: zero
 
+## Replay Diagnostics
+
+The saved models were replayed on the same test split to recover commitment
+diagnostics that were not logged during the original runs. Full results are in
+[`LEARNING_OBJECTIVE_REPLAY_METRICS.csv`](LEARNING_OBJECTIVE_REPLAY_METRICS.csv).
+
+| Run | False ON / day | False OFF / day | Pred. online-hours / day | Startup count / day | Transition event MAE |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `30714` baseline | 275.94 | 7.88 | 699.31 | 10.48 | 0.02649 |
+| `39104` alpha 0.5 | 277.30 | 9.17 | 699.38 | 10.16 | 0.02657 |
+| `40234` alpha 1.0 | 294.24 | 11.02 | 714.47 | 10.00 | 0.02649 |
+| `41987` alpha 1.5 | 284.82 | 9.10 | 706.97 | 10.39 | 0.02653 |
+
 ## Interpretation
 
 This was a useful negative result.
@@ -44,11 +57,18 @@ alpha `0.5`, is still `590.31` per day more expensive than `30714` and
 `545.06` per day more expensive than the controlled cost-proxy weight-5 run
 `35926`. Larger alpha values reduce status accuracy and worsen cost.
 
-The likely reason is that false-ON weighting is too local. It can discourage
-expensive OFF-label units, but it does not know whether the removed commitment
-must be replaced by another unit with higher linear dispatch cost, worse ramp
-position, or worse future feasibility. The final UC cost depends on the joint
-commitment and dispatch trajectory, not only on generator-wise false-ON labels.
+The replay shows the more direct failure mode. The asymmetric BCE did not
+actually reduce false-ON behavior. Alpha `1.0`, the worst cost case, increased
+false-ON events by about `18.30` generator-hours/day and increased predicted
+online-hours by about `15.16` versus `30714`. Therefore the weighted OFF-label
+BCE did not translate into fewer unnecessary commitments.
+
+The likely reason is that false-ON weighting is too local and competes with the
+rest of the trajectory objective. It can penalize an OFF-label unit, but it does
+not know whether the replacement schedule requires more expensive production,
+creates a worse ramp position, or forces future commitment changes. The final
+UC cost depends on the joint commitment and dispatch trajectory, not only on
+generator-wise false-ON labels.
 
 ## Conclusion
 

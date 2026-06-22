@@ -31,6 +31,7 @@ the physical-feasibility baseline with AI average daily cost `979,891.13`.
 | 1.5 | `42059` | 78.05% | 12.86 MW | 0.000004 MW | +4.35% | 980,288.81 | +397.69 | 8 | 7.38 ms/sample |
 | 2.0 | `42060` | 77.12% | 12.59 MW | 0.000004 MW | +4.75% | 984,017.50 | +4,126.38 | 1 | 7.33 ms/sample |
 | 5.0 | `42061` | 78.28% | 12.38 MW | 0.000004 MW | +4.27% | 979,464.38 | -426.75 | 41 | 7.19 ms/sample |
+| 10.0 | `42062` | 74.27% | 14.12 MW | 0.000004 MW | +4.93% | 985,679.69 | +5,788.56 | 2 | 7.22 ms/sample |
 
 All transition-loss runs preserve the solved physical behavior:
 
@@ -38,6 +39,22 @@ All transition-loss runs preserve the solved physical behavior:
 - mismatch over 10 MW: `0.00%`
 - ghost/capacity/ramp/startup-cap/shutdown-cap violations: zero
 - MUT/MDT violations: zero
+
+## Replay Diagnostics
+
+The saved models were replayed on the same test split to recover transition and
+commitment diagnostics. Full results are in
+[`LEARNING_OBJECTIVE_REPLAY_METRICS.csv`](LEARNING_OBJECTIVE_REPLAY_METRICS.csv).
+
+| Weight | Job | Cost Delta vs 30714 | False ON / day | False ON Delta | Online-Hour Delta | Startup Delta | Transition Event MAE |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline | `30714` | 0.00 | 275.94 | 0.00 | 0.00 | 0.00 | 0.02649 |
+| 0.5 | `42010` | +610.38 | 278.05 | +2.11 | +0.81 | -0.08 | 0.02696 |
+| 1.0 | `42043` | -148.63 | 274.97 | -0.97 | -0.47 | +0.21 | 0.02679 |
+| 1.5 | `42059` | +397.69 | 275.18 | -0.75 | -2.15 | -0.36 | 0.02665 |
+| 2.0 | `42060` | +4,126.38 | 284.73 | +8.79 | +4.88 | -0.83 | 0.02632 |
+| 5.0 | `42061` | -426.75 | 271.14 | -4.80 | -7.35 | +0.17 | 0.02721 |
+| 10.0 | `42062` | +5,788.56 | 319.81 | +43.87 | +38.13 | +3.74 | 0.03161 |
 
 ## Interpretation
 
@@ -53,18 +70,27 @@ recorded cost without adding another physical layer. The best run is weight
 Weight `1.0` / job `42043` is also meaningful: it improves cost by `148.63` per
 day and reaches the best moderate-weight validation behavior. The result is not
 monotonic, though. Weight `2.0` is clearly bad despite good power MAE, with a
-cost penalty of `4,126.38` per day versus `30714`.
+cost penalty of `4,126.38` per day versus `30714`. Weight `10.0` is worse still:
+it increases false-ON events by `43.87` generator-hours/day and online-hours by
+`38.13` versus `30714`.
 
 ## Problems Found
 
-The biggest evaluation problem is that jobs `42010` through `42061` did not log
-transition-specific metrics. We know the objective changed, but the saved
-evaluation cannot directly answer whether startup/shutdown timing improved.
-Future evaluations now record:
+The original evaluation problem was that jobs `42010` through `42062` did not
+log transition-specific metrics. The saved models can be replayed, so the
+metrics are recoverable, but it costs another inference pass per model. Future
+evaluations now record:
 
 - predicted and true online generator-hours per day;
 - predicted and true startup/shutdown counts per day;
 - startup, shutdown, and combined transition event MAE.
+
+The replay revealed an important modeling problem: the best cost run does not
+win by directly lowering transition event MAE. Job `42061` has a slightly worse
+transition event MAE than `30714`, but it reduces false-ON events by `4.80` per
+day and predicted online-hours by `7.35` per day. So the current transition loss
+acts as an indirect commitment-shaping signal, not as a clean transition metric
+optimizer.
 
 The second problem is objective coupling. A lower power MAE does not guarantee
 lower cost: job `42060` has strong power MAE but much worse cost. This confirms
@@ -72,7 +98,7 @@ that transition imitation alone can move the model into a different feasible
 commitment structure whose dispatch is closer in MAE but economically worse.
 
 The third problem is scale sensitivity. The useful weights are not monotonic:
-`1.0` and `5.0` help, while `0.5`, `1.5`, and especially `2.0` hurt. The next
+`1.0` and `5.0` help, while `0.5`, `1.5`, `2.0`, and `10.0` hurt. The next
 sweep should therefore focus locally around the two promising regions:
 
 - moderate: `0.8`, `1.0`, `1.2`;

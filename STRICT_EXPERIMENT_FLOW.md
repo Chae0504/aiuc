@@ -1,7 +1,7 @@
 # Strict Experiment Flow
 
 This document summarizes the strict-dataset experiment flow from job `22368`
-to the transition-loss sweep ending at job `42061`, excluding the
+to the transition-loss sweep ending at job `42062`, excluding the
 no-allocation strict baselines `22376` and `22377`.
 
 The main question was: how can the model reduce power-balance mismatch while
@@ -24,7 +24,7 @@ The strict Gurobi reference average daily cost is `939,381.69`.
 | 9 | `33220` | `30714` solved physical feasibility, but retained a `+4.31%` cost gap and restored Phase 2 best epoch 2. | Redirect Phase 2 from balance toward cheaper commitment patterns. | No-load plus startup cost proxy; Phase 2 status/power/balance/cost weights=`0.5/1/0/0.05`. | No economically. Feasibility stayed perfect and power MAE improved slightly, but cost gap worsened to `+4.39%`. | The proxy term was tiny relative to BCE/power loss. Because BCE was also halved, this run evaluates the combined weighting rather than isolating the proxy itself. |
 | 10 | `35385`, `35926`, `36329` | The first proxy run was confounded by a reduced BCE weight and an extremely small proxy contribution. | Isolate proxy scale while restoring BCE/power weights to `1/1` and keeping balance at `0`. | Controlled commitment-cost proxy sweep with weights `1`, `5`, and `10`; identical Phase 1 and 2-GPU batch configuration. | Partially. Weight 5 nearly matches 30714 cost while preserving feasibility, but remains 45.25/day higher. Weight 10 worsens total cost. | The proxy can shape commitment cost, but omitting linear production cost prevents monotonic improvement in the true UC objective. |
 | 11 | `39104`, `40234`, `41987` | Proxy-only pressure did not reliably reduce true cost, and unnecessary false-ON commitments were still a suspect. | Test whether status imitation can directly discourage expensive false-ON commitments while preserving 30714 feasibility. | Cost-weighted asymmetric BCE for false-ON labels; alpha sweep `0.5`, `1.0`, `1.5`; 2 GPUs, global batch `64`. | No economically. Feasibility stayed perfect and power MAE improved, but best cost gap worsened to `+4.38%`. | Generator-wise false-ON weighting is too local; true cost depends on the replacement commitment, linear dispatch, and future ramp trajectory. |
-| 12 | `42010`, `42043`, `42059`, `42060`, `42061` | Asymmetric BCE was too local, but the learning objective still needed to target Gurobi-like commitment structure. | Learn startup/shutdown timing directly without adding another physical layer. | Transition BCE: status BCE plus startup/shutdown event MAE; weights `0.5`, `1.0`, `1.5`, `2.0`, `5.0`. | Yes at selected scales. Weight 5 improves cost by `426.75` per day vs `30714`, preserves feasibility, and improves power MAE. | Transition imitation is promising, but scale-sensitive; future evaluation must log transition-specific metrics. |
+| 12 | `42010`, `42043`, `42059`, `42060`, `42061`, `42062` | Asymmetric BCE was too local, but the learning objective still needed to target Gurobi-like commitment structure. | Learn startup/shutdown timing directly without adding another physical layer. | Transition BCE: status BCE plus startup/shutdown event MAE; weights `0.5`, `1.0`, `1.5`, `2.0`, `5.0`, `10.0`. | Yes at selected scales. Weight 5 improves cost by `426.75` per day vs `30714`, preserves feasibility, and improves power MAE. Weight 10 collapses status quality. | Transition imitation is promising, but scale-sensitive; replay shows cost gains come mainly from fewer false-ON/online-hours, not lower transition MAE. |
 
 ## Narrative
 
@@ -235,7 +235,7 @@ term, or use a feasibility-preserving economic projection/decommitment layer.
 
 ### 12. Transition Loss Revived the Learning Objective
 
-Jobs `42010`, `42043`, `42059`, `42060`, and `42061` kept the full `30714`
+Jobs `42010`, `42043`, `42059`, `42060`, `42061`, and `42062` kept the full `30714`
 physical architecture and added a startup/shutdown transition imitation term to
 the status loss. This avoided adding another physical layer while giving the
 neural model a more structural target than pointwise BCE.
@@ -257,11 +257,15 @@ The problem is scale sensitivity. Weight `2.0` gives good power MAE
 (`12.59 MW`) but worsens cost by `4,126.38` per day versus `30714`. This shows
 that matching transition shape can still land in an economically worse feasible
 commitment if the weight pushes the model into a bad local structure.
+Weight `10.0` is the failure extreme: status accuracy falls to `74.27%`, power
+MAE worsens to `14.12 MW`, and cost worsens by `5,788.56` per day.
 
-Another problem is measurement. The original evaluator did not log startup and
-shutdown event errors, so these five runs cannot prove directly that transition
-timing improved. The evaluator now records online-hours, startup/shutdown
-counts, and transition event MAE for future runs.
+The replay metrics clarify the mechanism. Job `42061` does not have a lower
+transition event MAE than `30714`; instead it reduces false-ON events by `4.80`
+per day and predicted online-hours by `7.35` per day. So transition loss is
+currently useful as an indirect commitment-shaping signal, not because it
+directly minimizes the replayed transition error. The evaluator now records
+online-hours, startup/shutdown counts, and transition event MAE for future runs.
 
 ## Current Best Interpretation
 
