@@ -44,3 +44,12 @@ TRANSITION_WEIGHT=0.5 sbatch slurm/run_rnncell_strict_transition_2gpu.sh
 
 This branch keeps the physical layers unchanged and changes only the status
 loss to `BCE + TRANSITION_WEIGHT * transition_MAE`.
+
+For the 30714 architecture with total online-hour imitation:
+
+```bash
+ONLINE_HOURS_WEIGHT=0.1 sbatch slurm/run_rnncell_strict_online_hours_2gpu.sh
+```
+
+This branch keeps the physical layers unchanged and changes only the status
+loss to `BCE + ONLINE_HOURS_WEIGHT * normalized_online_hour_error`.

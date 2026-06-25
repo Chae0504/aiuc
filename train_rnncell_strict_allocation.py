@@ -256,6 +256,10 @@ def train_and_evaluate(
         model_kwargs["status_transition_loss_weight"] = (
             args.status_transition_loss_weight
         )
+    if "status_online_hours_loss_weight" in inspect.signature(build_model).parameters:
+        model_kwargs["status_online_hours_loss_weight"] = (
+            args.status_online_hours_loss_weight
+        )
 
     with strategy.scope():
         model = build_model(

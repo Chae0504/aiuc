@@ -17,7 +17,8 @@ current physical-feasibility baseline.
 | `multiramp` | `slurm/run_rnncell_strict_allocation_multistep_ramp_position.sh` | `train_rnncell_strict_allocation_multistep_ramp_position.py` | Multi-step ramp-position-aware allocation | `30714` | Current physical-feasibility baseline |
 | `strict_econ` | `slurm/run_rnncell_strict_econ.sh` | `train_rnncell_strict_econ.py` | Same architecture as `multiramp`, but Phase 2 optimizes a commitment cost proxy | `35385`, `35926`, `36329` | Weight 5 is the best controlled proxy scale, but does not beat 30714 |
 | `asym_bce` | `slurm/run_rnncell_strict_asym_bce_2gpu.sh` | `train_rnncell_strict_asym_bce.py` | Same architecture as `multiramp`, but false-ON status BCE is weighted by commitment cost | `39104`, `40234`, `41987` | Negative diagnostic; preserves feasibility but worsens cost versus 30714 |
-| `transition` | `slurm/run_rnncell_strict_transition_2gpu.sh` | `train_rnncell_strict_transition.py` | Same architecture as `multiramp`, but status loss includes startup/shutdown transition imitation | `42010`, `42043`, `42059`, `42060`, `42061`, `42062` | Best learning-objective branch so far; weight 5 improves cost without adding a physical layer |
+| `transition` | `slurm/run_rnncell_strict_transition_2gpu.sh` | `train_rnncell_strict_transition.py` | Same architecture as `multiramp`, but status loss includes startup/shutdown transition imitation | `42010`, `42043`, `42059`, `42060`, `42061`, `42062` | Useful positive branch; weight 5 improves cost without adding a physical layer |
+| `online_hours` | `slurm/run_rnncell_strict_online_hours_2gpu.sh` | `train_rnncell_strict_online_hours.py` | Same architecture as `multiramp`, but status loss includes total online-hour imitation | `42765`, `58498`, `58816`, `59479`, `59629`, `59673` | Best learning-objective branch so far; weight 0.2 improves cost by 782.75/day versus 30714 |
 
 ## Current Baseline
 
@@ -122,3 +123,30 @@ Weight `2.0` is a cautionary case: power MAE improves, but cost worsens sharply
 to `+4.75%`. Weight `10.0` is worse at `+4.93%`, with false-ON events up
 `43.87` per day versus `30714`. The objective is useful but scale-sensitive. See
 [`TRANSITION_LOSS_EXPERIMENTS.md`](TRANSITION_LOSS_EXPERIMENTS.md).
+
+## Online-Hours Loss Result: `online_hours`
+
+`online_hours` keeps the `30714` physical architecture and adds a total
+online-hour imitation term to the status loss:
+
+```text
+L_status = BCE + lambda_online * |sum(u_hat) - sum(u)| / (T * G)
+```
+
+The branch was motivated by the transition-loss replay: the best transition
+run improved cost mainly by reducing false-ON and online-hours, not by lowering
+transition event MAE.
+
+The `0.05/0.10/0.20/0.30/0.50/1.00` sweep found weight `0.20` to be best:
+
+- weight 0.20 / job `58816`: cost gap `+4.23%`, `782.75` per day cheaper than `30714`
+- status accuracy improves from `78.10%` to `78.33%`
+- power MAE improves from `12.92 MW` to `12.74 MW`
+- mismatch max remains `0.0005 MW`
+
+The objective is also scale-sensitive. Weight `1.00` worsens cost to `+4.72%`
+and status accuracy to `76.72%`. The remaining problem is that even the best
+run still predicts `697.00` online generator-hours per day versus the Gurobi
+label `431.25`, so the next branch should move from global online-hour matching
+to generator-wise or cost-weighted online-hour matching. See
+[`ONLINE_HOURS_EXPERIMENTS.md`](ONLINE_HOURS_EXPERIMENTS.md).

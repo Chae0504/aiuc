@@ -18,6 +18,7 @@ from tensorflow.keras.models import Model
 from legacy.rnncell_model import (
     BatchZeros,
     CostWeightedBinaryCrossentropy,
+    OnlineHoursBinaryCrossentropy,
     OnlyMismatchLoss,
     PhysicsInformedUCCell,
     TransitionBinaryCrossentropy,
@@ -235,6 +236,7 @@ def build_hybrid_uc_strict_allocation_model(
     status_loss_mode="bce",
     status_false_on_alpha=0.5,
     status_transition_loss_weight=0.5,
+    status_online_hours_loss_weight=0.1,
 ):
     if cell_kwargs is None:
         cell_kwargs = {}
@@ -309,6 +311,10 @@ def build_hybrid_uc_strict_allocation_model(
         status_loss = TransitionBinaryCrossentropy(
             transition_weight=status_transition_loss_weight,
             initial_status_vals=specs["init_status"],
+        )
+    elif status_loss_mode == "online_hours_bce":
+        status_loss = OnlineHoursBinaryCrossentropy(
+            online_hours_weight=status_online_hours_loss_weight,
         )
     elif status_loss_mode != "bce":
         raise ValueError(f"Unsupported status_loss_mode: {status_loss_mode}")

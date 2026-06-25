@@ -1,7 +1,7 @@
 # Strict Experiment Flow
 
 This document summarizes the strict-dataset experiment flow from job `22368`
-to the transition-loss sweep ending at job `42062`, excluding the
+to the online-hours loss sweep ending at job `59673`, excluding the
 no-allocation strict baselines `22376` and `22377`.
 
 The main question was: how can the model reduce power-balance mismatch while
@@ -25,6 +25,7 @@ The strict Gurobi reference average daily cost is `939,381.69`.
 | 10 | `35385`, `35926`, `36329` | The first proxy run was confounded by a reduced BCE weight and an extremely small proxy contribution. | Isolate proxy scale while restoring BCE/power weights to `1/1` and keeping balance at `0`. | Controlled commitment-cost proxy sweep with weights `1`, `5`, and `10`; identical Phase 1 and 2-GPU batch configuration. | Partially. Weight 5 nearly matches 30714 cost while preserving feasibility, but remains 45.25/day higher. Weight 10 worsens total cost. | The proxy can shape commitment cost, but omitting linear production cost prevents monotonic improvement in the true UC objective. |
 | 11 | `39104`, `40234`, `41987` | Proxy-only pressure did not reliably reduce true cost, and unnecessary false-ON commitments were still a suspect. | Test whether status imitation can directly discourage expensive false-ON commitments while preserving 30714 feasibility. | Cost-weighted asymmetric BCE for false-ON labels; alpha sweep `0.5`, `1.0`, `1.5`; 2 GPUs, global batch `64`. | No economically. Feasibility stayed perfect and power MAE improved, but best cost gap worsened to `+4.38%`. | Generator-wise false-ON weighting is too local; true cost depends on the replacement commitment, linear dispatch, and future ramp trajectory. |
 | 12 | `42010`, `42043`, `42059`, `42060`, `42061`, `42062` | Asymmetric BCE was too local, but the learning objective still needed to target Gurobi-like commitment structure. | Learn startup/shutdown timing directly without adding another physical layer. | Transition BCE: status BCE plus startup/shutdown event MAE; weights `0.5`, `1.0`, `1.5`, `2.0`, `5.0`, `10.0`. | Yes at selected scales. Weight 5 improves cost by `426.75` per day vs `30714`, preserves feasibility, and improves power MAE. Weight 10 collapses status quality. | Transition imitation is promising, but scale-sensitive; replay shows cost gains come mainly from fewer false-ON/online-hours, not lower transition MAE. |
+| 13 | `42765`, `58498`, `58816`, `59479`, `59629`, `59673` | Transition replay showed that the best transition run did not lower transition event MAE; it became cheaper mainly by reducing false-ON and online-hours. | Target the online-hour surplus directly without adding another physical layer. | Online-hours BCE: status BCE plus total online-hour imitation; weights `0.05`, `0.10`, `0.20`, `0.30`, `0.50`, `1.00`. | Yes at weight `0.20`. Job `58816` improves cost by `782.75` per day vs `30714` and by `356.00` per day vs `42061`, while preserving numerical feasibility. | The right learning signal is closer to online duration than transition timing, but a global online-hour loss is still too coarse and scale-sensitive. |
 
 ## Narrative
 
@@ -267,6 +268,50 @@ currently useful as an indirect commitment-shaping signal, not because it
 directly minimizes the replayed transition error. The evaluator now records
 online-hours, startup/shutdown counts, and transition event MAE for future runs.
 
+### 13. Online-Hours Loss Targeted the Actual Cost Signal
+
+Jobs `42765`, `58498`, `58816`, `59479`, `59629`, and `59673` kept the full
+`30714` physical architecture and replaced the transition idea with a more
+direct total online-hour imitation term. This was motivated by the replay
+diagnostic above: the useful economic change from transition loss was not
+cleanly about transition timing. It was about reducing unnecessary online
+generator-hours.
+
+The status loss became:
+
+```text
+L_status =
+  BCE(u, u_hat)
+  + lambda_online * |sum_t sum_i u_hat_i,t - sum_t sum_i u_i,t| / (T * G)
+```
+
+Weight `0.20` / job `58816` is the best result in this branch:
+
+- cost improves by `782.75` per day versus `30714`;
+- cost improves by `356.00` per day versus transition best `42061`;
+- status accuracy improves from `78.10%` to `78.33%` versus `30714`;
+- power MAE improves from `12.92 MW` to `12.74 MW`;
+- mismatch max remains `0.0005 MW` and evaluated hard violations remain zero.
+
+This makes `58816` the best current learning-objective branch. The result also
+confirms the earlier diagnosis: once deterministic layers solve feasibility,
+the neural objective should focus on commitment duration and economic
+structure, not more balance pressure.
+
+The problem is that the objective is global and scale-sensitive. The best run
+still predicts `697.00` online generator-hours per day while the Gurobi labels
+have `431.25`, leaving a surplus of `265.75` generator-hours per day. Also,
+larger weights are not automatically better: weight `1.00` worsens cost by
+`3,873.88` per day relative to `30714`.
+
+The next learning-objective branch should therefore make the online-hour signal
+more specific:
+
+- generator-wise online-hour matching;
+- cost-weighted generator-wise online-hour matching;
+- or a small combination of online-hours and transition loss after local weight
+  tuning around `0.20`.
+
 ## Current Best Interpretation
 
 Job `30714` is now the strongest strict-data result for physical feasibility:
@@ -276,12 +321,15 @@ Job `30714` is now the strongest strict-data result for physical feasibility:
 - mismatch over 10 MW: `0.00%`
 - hard constraint violations: zero
 
-Job `28562` remains slightly better economically (`+4.25%` cost gap vs
-`+4.31%`) and has slightly lower power MAE, but it retains a `117.57 MW` rare
-shortage. The current frontier is therefore:
+Job `28562` used to be slightly better economically than `30714`, but it
+retains a `117.57 MW` rare shortage. Job `58816` is now better on the useful
+frontier: it keeps the `30714` numerical feasibility behavior and lowers cost
+gap to `+4.23%`.
+
+The current frontier is therefore:
 
 - `30714` for strict physical feasibility;
-- `28562` for slightly better cost with one rare balance tail.
+- `58816` for the best current feasible learning-objective result.
 
 Job `33220` does not replace either frontier model. It verifies that a
 differentiable commitment-cost signal can be added without breaking physical
@@ -296,9 +344,13 @@ The asymmetric BCE sweep confirms that generator-wise false-ON penalties are
 also insufficient as a standalone economic objective. It preserves feasibility
 but does not beat either `30714` or the controlled proxy weight-5 result.
 
-The transition-loss sweep is more promising: `42061` is cheaper than `30714`
-without adding another physical layer. Treat `30714` as the conservative
-physical baseline and `42061` as the best current learning-objective branch.
+The transition-loss sweep was the first positive learning-objective branch:
+`42061` is cheaper than `30714` without adding another physical layer. The
+online-hours sweep improves that result: `58816` is cheaper than both `30714`
+and `42061` while preserving the same numerical feasibility.
+
+Treat `30714` as the conservative physical baseline and `58816` as the best
+current learning-objective branch.
 
 ## Next Research Direction
 
@@ -316,7 +368,7 @@ to the reference UC optimum:
 
 The next likely methods are:
 
-- cost-aware commitment pruning after feasibility repair;
-- stronger imitation learning for commitment patterns;
-- a full differentiable cost objective including linear production cost;
-- or a small feasibility-preserving economic projection layer.
+- generator-wise online-hour imitation;
+- cost-weighted generator-wise online-hour imitation;
+- local online-hours weight tuning around `0.20`;
+- or a small combined online-hours plus transition objective.

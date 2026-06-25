@@ -23,6 +23,9 @@ The asymmetric false-ON BCE sweep is recorded in
 The transition-loss sweep is recorded in
 [`TRANSITION_LOSS_EXPERIMENTS.md`](TRANSITION_LOSS_EXPERIMENTS.md).
 
+The online-hours loss sweep is recorded in
+[`ONLINE_HOURS_EXPERIMENTS.md`](ONLINE_HOURS_EXPERIMENTS.md).
+
 Replay diagnostics for the learning-objective branches are in
 [`LEARNING_OBJECTIVE_REPLAY_METRICS.csv`](LEARNING_OBJECTIVE_REPLAY_METRICS.csv).
 
@@ -60,6 +63,12 @@ Safety-margin runs from `22454` are recorded separately in
 | 2026-06-22 | 42060 | 435bcda + local changes | `30714` architecture with transition BCE; transition weight=2.0; 2 GPUs, global batch=64 | 77.12% | 12.59 MW | 0.000004 MW (0.0000001%) | +4.75% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 41; restored best epoch 1. Power MAE improves, but status structure and cost degrade sharply |
 | 2026-06-22 | 42061 | 435bcda + local changes | `30714` architecture with transition BCE; transition weight=5.0; 2 GPUs, global batch=64 | 78.28% | 12.38 MW | 0.000004 MW (0.0000001%) | +4.27% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 81; restored best epoch 41. Best transition run: cost improves by 426.75/day and power MAE improves by 0.54 MW vs 30714 |
 | 2026-06-22 | 42062 | 435bcda + local changes | `30714` architecture with transition BCE; transition weight=10.0; 2 GPUs, global batch=64 | 74.27% | 14.12 MW | 0.000004 MW (0.0000001%) | +4.93% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 42; restored best epoch 2. Too much transition pressure collapses status quality and increases false-ON by 43.87/day vs 30714 |
+| 2026-06-23 | 42765 | 07112ca + local changes | `30714` architecture with online-hours BCE; online-hours weight=0.05; 2 GPUs, global batch=64 | 77.00% | 13.03 MW | 0.000004 MW (0.0000001%) | +4.64% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 67; restored best epoch 27. Too weak or poorly aligned; false-ON rises to 291.05/day and cost worsens by 3,047.38/day vs 30714 |
+| 2026-06-23 | 58498 | 07112ca + local changes | `30714` architecture with online-hours BCE; online-hours weight=0.10; 2 GPUs, global batch=64 | 77.57% | 12.95 MW | 0.000004 MW (0.0000001%) | +4.46% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 66; restored best epoch 26. Improves over weight 0.05 but remains 1,356.75/day more expensive than 30714 |
+| 2026-06-24 | 58816 | 07112ca + local changes | `30714` architecture with online-hours BCE; online-hours weight=0.20; 2 GPUs, global batch=64 | 78.33% | 12.74 MW | 0.000004 MW (0.0000001%) | +4.23% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 41; restored best epoch 1. Best learning-objective branch so far: cost improves by 782.75/day vs 30714 and 356.00/day vs transition best 42061 |
+| 2026-06-25 | 59479 | 07112ca + local changes | `30714` architecture with online-hours BCE; online-hours weight=0.30; 2 GPUs, global batch=64 | 78.07% | 12.70 MW | 0.000004 MW (0.0000001%) | +4.33% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 42; restored best epoch 2. Close to baseline but 142.63/day more expensive than 30714; useful upper-neighborhood point |
+| 2026-06-25 | 59629 | 07112ca + local changes | `30714` architecture with online-hours BCE; online-hours weight=0.50; 2 GPUs, global batch=64 | 77.90% | 12.82 MW | 0.000004 MW (0.0000001%) | +4.37% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 44; restored best epoch 4. Stronger online-hours pressure no longer helps; predicted online-hours rise back to 701.69/day |
+| 2026-06-25 | 59673 | 07112ca + local changes | `30714` architecture with online-hours BCE; online-hours weight=1.00; 2 GPUs, global batch=64 | 76.72% | 13.24 MW | 0.000004 MW (0.0000001%) | +4.72% | 0.0005 MW | 0.00% | 0.000002 / 0.000002 MW | Early stopped at epoch 41; restored best epoch 1. Too much online-hours pressure collapses status quality and increases false-ON to 296.06/day |
 
 ## Legacy Dataset
 
@@ -90,7 +99,8 @@ historical comparison.
    `sbatch slurm/run_rnncell_strict_allocation_startup_repair.sh` or
    `sbatch slurm/run_rnncell_strict_allocation_ramp_position.sh` or
    `sbatch slurm/run_rnncell_strict_allocation_multistep_ramp_position.sh` or
-   `sbatch slurm/run_rnncell_strict_econ.sh`.
+   `sbatch slurm/run_rnncell_strict_econ.sh` or
+   `sbatch slurm/run_rnncell_strict_online_hours_2gpu.sh`.
 3. Inspect `outputs/rnncell_strict_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_repair_<job_id>/evaluation.json` or
@@ -100,6 +110,7 @@ historical comparison.
    `outputs/rnncell_strict_allocation_startup_repair_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_ramp_position_<job_id>/evaluation.json` or
    `outputs/rnncell_strict_allocation_multistep_ramp_position_<job_id>/evaluation.json` or
-   `outputs/rnncell_strict_econ_costw<weight>_<gpu_count>gpu_<job_id>/evaluation.json`.
+   `outputs/rnncell_strict_econ_costw<weight>_<gpu_count>gpu_<job_id>/evaluation.json` or
+   `outputs/rnncell_strict_online_hours_w<weight>_2gpu_<job_id>/evaluation.json`.
 4. Generate a summary row with `python summarize_experiment.py <output_dir>`.
 5. Add the row above with a short description and commit the updated log.

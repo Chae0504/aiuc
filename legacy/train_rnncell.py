@@ -60,11 +60,17 @@ def parse_args():
     parser.add_argument("--phase2-cost-loss-weight", type=float, default=0.0)
     parser.add_argument(
         "--status-loss-mode",
-        choices=["bce", "cost_weighted_bce", "transition_bce"],
+        choices=[
+            "bce",
+            "cost_weighted_bce",
+            "transition_bce",
+            "online_hours_bce",
+        ],
         default="bce",
         help=(
             "Status imitation loss. cost_weighted_bce penalizes false ONs more; "
-            "transition_bce adds startup/shutdown timing imitation."
+            "transition_bce adds startup/shutdown timing imitation; "
+            "online_hours_bce adds total online-hour imitation."
         ),
     )
     parser.add_argument(
@@ -81,6 +87,12 @@ def parse_args():
         type=float,
         default=0.5,
         help="Startup/shutdown transition MAE weight for transition_bce.",
+    )
+    parser.add_argument(
+        "--status-online-hours-loss-weight",
+        type=float,
+        default=0.1,
+        help="Total online-hour MAE weight for online_hours_bce.",
     )
     parser.add_argument("--reduce-lr-patience", type=int, default=8)
     parser.add_argument("--reduce-lr-factor", type=float, default=0.5)

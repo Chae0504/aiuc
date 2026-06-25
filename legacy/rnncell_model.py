@@ -167,6 +167,46 @@ class TransitionBinaryCrossentropy(tf.keras.losses.Loss):
 
 
 @tf.keras.utils.register_keras_serializable(package="AIUC")
+class OnlineHoursBinaryCrossentropy(tf.keras.losses.Loss):
+    """Binary crossentropy plus total online-hour imitation."""
+
+    def __init__(
+        self,
+        online_hours_weight=0.1,
+        name="online_hours_binary_crossentropy",
+        reduction="sum_over_batch_size",
+    ):
+        super().__init__(name=name, reduction=reduction)
+        self.online_hours_weight = float(online_hours_weight)
+        if self.online_hours_weight < 0:
+            raise ValueError("online_hours_weight must be non-negative")
+
+    def call(self, y_true, y_pred):
+        y_true = tf.cast(y_true, tf.float32)
+        epsilon = tf.keras.backend.epsilon()
+        y_pred = tf.clip_by_value(y_pred, epsilon, 1.0 - epsilon)
+        bce = -(
+            y_true * tf.math.log(y_pred)
+            + (1.0 - y_true) * tf.math.log(1.0 - y_pred)
+        )
+        status_loss = tf.reduce_mean(bce)
+
+        true_online_hours = tf.reduce_sum(y_true, axis=(1, 2))
+        pred_online_hours = tf.reduce_sum(y_pred, axis=(1, 2))
+        horizon_size = tf.cast(tf.shape(y_true)[1] * tf.shape(y_true)[2], tf.float32)
+        online_hours_loss = tf.reduce_mean(
+            tf.abs(pred_online_hours - true_online_hours) / horizon_size
+        )
+        return status_loss + self.online_hours_weight * online_hours_loss
+
+    def get_config(self):
+        return {
+            **super().get_config(),
+            "online_hours_weight": self.online_hours_weight,
+        }
+
+
+@tf.keras.utils.register_keras_serializable(package="AIUC")
 def ste_binarize(x):
     """Round in the forward pass while keeping a straight-through gradient."""
     return x + tf.stop_gradient(tf.round(x) - x)

@@ -38,6 +38,12 @@ RUNS = [
     ("transition", "2.0", "42060", "outputs/rnncell_strict_transition_w2_2gpu_42060"),
     ("transition", "5.0", "42061", "outputs/rnncell_strict_transition_w5_2gpu_42061"),
     ("transition", "10.0", "42062", "outputs/rnncell_strict_transition_w10_2gpu_42062"),
+    ("online_hours", "0.05", "42765", "outputs/rnncell_strict_online_hours_w0.05_2gpu_42765"),
+    ("online_hours", "0.1", "58498", "outputs/rnncell_strict_online_hours_w0.1_2gpu_58498"),
+    ("online_hours", "0.2", "58816", "outputs/rnncell_strict_online_hours_w0.2_2gpu_58816"),
+    ("online_hours", "0.3", "59479", "outputs/rnncell_strict_online_hours_w0.3_2gpu_59479"),
+    ("online_hours", "0.5", "59629", "outputs/rnncell_strict_online_hours_w0.5_2gpu_59629"),
+    ("online_hours", "1.0", "59673", "outputs/rnncell_strict_online_hours_w1.0_2gpu_59673"),
 ]
 
 
